@@ -4,10 +4,12 @@ let ctx: AudioContext | null = null;
 let muted = false;
 let musicTimer: number | null = null;
 let musicGeneration = 0;
+let desiredMusic: MusicStyle | null = null;
 
 export function setMuted(value: boolean) {
   muted = value;
   if (value) stopMusic();
+  else if (desiredMusic) startMusic(desiredMusic);
 }
 
 export function isMuted() {
@@ -98,6 +100,7 @@ export function stopMusic() {
 
 /** Starts an original, asset-free two-voice arcade loop. Only one soundtrack can play at once. */
 export function startMusic(style: MusicStyle): () => void {
+  desiredMusic = style;
   stopMusic();
   if (typeof window === "undefined" || muted) return () => {};
   const generation = musicGeneration;
