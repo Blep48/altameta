@@ -134,7 +134,7 @@ function DirectionGame() {
         onPointerUp={onPointerUp}
         className={`relative mx-5 mt-2 min-h-0 flex-1 touch-none select-none overflow-hidden rounded-3xl border bg-card ${flash === "miss" ? "animate-shake border-destructive" : "border-border"}`}
       >
-        <OpponentOutBanner opponentName={activeMatch.opponent.username} opponentScore={opponentOut} playerScore={destroyed} outAfterMs={1100 + opponentOutMs} label="arrows" />
+        <OpponentOutBanner opponentName={activeMatch.opponent.username} opponentScore={opponentOut} playerScore={destroyed} wagerEur={wagerEur} outAfterMs={1100 + opponentOutMs} label="arrows" />
         <div className="absolute inset-x-0 border-t-2 border-dashed border-destructive/70" style={{ top: `${DANGER_Y_PERCENT}%` }}>
           <span className="absolute right-3 -top-5 text-[9px] font-bold tracking-[0.2em] text-destructive">DANGER</span>
         </div>
