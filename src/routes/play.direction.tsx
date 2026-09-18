@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDuel } from "@/lib/duel/provider";
-import { sfx } from "@/lib/duel/audio";
+import { sfx, startMusic } from "@/lib/duel/audio";
 import { MatchBalance } from "@/components/duel/MatchBalance";
 import {
   createDirectionChart,
@@ -21,6 +21,7 @@ const SWIPE_MIN = 34;
 const SYMBOL: Record<Direction, string> = { up: "↑", right: "→", down: "↓", left: "←" };
 
 function DirectionGame() {
+  useEffect(() => startMusic("direction"), []);
   const navigate = useNavigate();
   const { activeMatch, finishDirectionMatch, ready, profile, wagerEur } = useDuel();
   const [phase, setPhase] = useState<Phase>("ready");
