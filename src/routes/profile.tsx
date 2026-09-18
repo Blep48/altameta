@@ -18,7 +18,7 @@ export const Route = createFileRoute("/profile")({
 
 function Profile() {
   const { profile, history, updateProfile, resetProgress } = useDuel();
-  const scores = highScores(history);
+  const scores = highScores(profile.highscores ?? {}, history);
 
   return (
     <Screen>
@@ -88,4 +88,4 @@ function Profile() {
   );
 }
 
-function highScores(history: ReturnType<typeof useDuel>["history"]) { const defs=[["reaction","REACTION"],["rhythm","RHYTHM"],["direction","DIRECTION"],["memory","MONKEY TEST"],["flappy","FLAPPY"],["dash","DINO RUN"],["stack","STACK"],["knife","KNIFE IT"],["precision","PRECISION"]] as const; return defs.map(([id,name])=>{const rows=history.filter(h=>h.gameId===id);if(!rows.length)return{id,name,value:"—"};if(id==="reaction"){const v=Math.min(...rows.map(r=>r.playerAvgMs));return{id,name,value:`${Math.round(v)} ms`}}const v=Math.max(...rows.map(r=>r.survival?.playerScore??r.rhythm?.playerNotes??r.direction?.playerArrows??r.monkey?.playerLevels??r.precision?.playerPoints??r.playerAvgMs));return{id,name,value:String(Math.round(v))}}); }
+function highScores(saved: Record<string,number>, history: ReturnType<typeof useDuel>["history"]) { const defs=[["reaction","REACTION"],["rhythm","RHYTHM"],["direction","DIRECTION"],["memory","MONKEY TEST"],["flappy","FLAPPY"],["dash","DINO RUN"],["stack","STACK"],["knife","KNIFE IT"],["precision","PRECISION"]] as const; return defs.map(([id,name])=>{const rows=history.filter(h=>h.gameId===id);const stored=saved[id];if(stored!=null)return{id,name,value:id==="reaction"?`${Math.round(stored)} ms`:String(Math.round(stored))};if(!rows.length)return{id,name,value:"—"};if(id==="reaction"){const v=Math.min(...rows.map(r=>r.playerAvgMs));return{id,name,value:`${Math.round(v)} ms`}}const v=Math.max(...rows.map(r=>r.survival?.playerScore??r.rhythm?.playerNotes??r.direction?.playerArrows??r.monkey?.playerLevels??r.precision?.playerPoints??r.playerAvgMs));return{id,name,value:String(Math.round(v))}}); }
