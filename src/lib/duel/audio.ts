@@ -17,7 +17,7 @@ const TRACKS = {
   ],
 } as const;
 
-let unlockBound = false;
+let unlockBound = false;\nlet visibilityBound = false;\n\nfunction bindVisibilityPause() {\n  if (visibilityBound || typeof document === "undefined") return;\n  visibilityBound = true;\n  document.addEventListener("visibilitychange", () => {\n    if (document.hidden) {\n      music?.pause();\n      return;\n    }\n    if (!muted && desiredMusic && music) {\n      void music.play().catch(() => bindAudioUnlock());\n    }\n  });\n  window.addEventListener("pagehide", () => music?.pause());\n  window.addEventListener("pageshow", () => {\n    if (!document.hidden && !muted && desiredMusic && music) {\n      void music.play().catch(() => bindAudioUnlock());\n    }\n  });\n}
 
 function bindAudioUnlock() {
   if (unlockBound || typeof window === "undefined") return;
