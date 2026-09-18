@@ -6,6 +6,6 @@ export async function createFriendChallenge(i:{gameId:string;wagerEur:number;nam
 export async function getFriendChallenge(code:string){try{return (await call({action:"get",code})).challenge as FriendChallenge}catch{return null}}
 export async function joinFriendChallenge(code:string,name:string,avatar:string){return call({action:"join",code,name,avatar}) as Promise<{challenge:FriendChallenge;token:string}>}
 export async function submitFriendScore(code:string,token:string,score:number){return call({action:"submit",code,token,score}) as Promise<{challenge:FriendChallenge;winner:null|"creator"|"guest"|"tie"}>}
-export function getFriendSession():FriendSession|null{if(typeof window==="undefined")return null;try{return JSON.parse(sessionStorage.getItem("altameta:friendChallenge")||"null")}catch{return null}}
-export function setFriendSession(s:FriendSession){sessionStorage.setItem("altameta:friendChallenge",JSON.stringify(s))}
-export function clearFriendSession(){sessionStorage.removeItem("altameta:friendChallenge")}
+export function getFriendSession():FriendSession|null{if(typeof window==="undefined")return null;try{return JSON.parse(localStorage.getItem("altameta:friendChallenge")||"null")}catch{return null}}
+export function setFriendSession(s:FriendSession){localStorage.setItem("altameta:friendChallenge",JSON.stringify(s))}
+export function clearFriendSession(){localStorage.removeItem("altameta:friendChallenge")}
