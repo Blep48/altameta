@@ -2,12 +2,13 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDuel } from "@/lib/duel/provider";
 import { MatchBalance } from "@/components/duel/MatchBalance";
-import { sfx } from "@/lib/duel/audio";
+import { sfx, startMusic } from "@/lib/duel/audio";
 import { createMonkeyBoard, simulateMonkeyOpponent } from "@/lib/duel/engine/monkey";
 
 export const Route = createFileRoute("/play/memory")({ component: MonkeyTest });
 
 function MonkeyTest() {
+  useEffect(() => startMusic("monkey"), []);
   const navigate = useNavigate();
   const { activeMatch, finishMonkeyMatch, ready, profile, wagerEur } = useDuel();
   const [level, setLevel] = useState(0);

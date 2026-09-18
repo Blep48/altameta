@@ -44,6 +44,7 @@ interface DuelContextValue {
   }) => MatchOutcome | null;
   finishDirectionMatch: (args: { playerArrows: number; opponentArrows: number }) => MatchOutcome | null;
   finishMonkeyMatch: (args: { playerLevels: number; opponentLevels: number }) => MatchOutcome | null;
+  finishSurvivalMatch: (args: { playerScore: number; opponentScore: number }) => MatchOutcome | null;
   resetProgress: () => void;
   wagerEur: number;
   setWagerEur: (value: number) => void;
@@ -345,6 +346,28 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     }, [activeMatch,wagerEur],
   );
 
+  const finishSurvivalMatch: DuelContextValue["finishSurvivalMatch"] = useCallback(
+    ({ playerScore, opponentScore }) => {
+      if (!activeMatch) return null;
+      const won = playerScore > opponentScore;
+      const outcome: MatchOutcome = {
+        id: activeMatch.id, gameId: activeMatch.gameId,
+        opponentName: activeMatch.opponent.username, opponentAvatar: activeMatch.opponent.avatar,
+        opponentRating: activeMatch.opponent.rating, playerAvgMs: playerScore,
+        opponentAvgMs: opponentScore, playerBestMs: playerScore, falseStarts: 0,
+        won, coinDelta: balanceDelta(won, wagerEur), wagerEur,
+        ratingDelta: ratingDeltaFor(won), playedAt: new Date().toISOString(), rounds: [],
+        survival: { seed: activeMatch.seed, playerScore, opponentScore },
+      };
+      setProfile(prev => {
+        const next = applyMatchToProfile(prev,{won,ratingDelta:outcome.ratingDelta,settlement:settlementAmount(won,wagerEur),bestRoundMs:null});
+        storage.write(STORAGE_KEYS.profile,next); return next;
+      });
+      setHistory(prev => { const next=[outcome,...prev].slice(0,50);storage.write(STORAGE_KEYS.history,next);return next;});
+      setLastOutcome(outcome); setActiveMatch(null); return outcome;
+    }, [activeMatch,wagerEur],
+  );
+
   const resetProgress = useCallback(() => {
     const fresh = createDefaultProfile();
     persistProfile(fresh);
@@ -371,6 +394,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       finishPrecisionMatch,
       finishDirectionMatch,
       finishMonkeyMatch,
+      finishSurvivalMatch,
       resetProgress,
       wagerEur,
       setWagerEur,
@@ -392,6 +416,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       finishPrecisionMatch,
       finishDirectionMatch,
       finishMonkeyMatch,
+      finishSurvivalMatch,
       resetProgress,
       wagerEur,
     ],

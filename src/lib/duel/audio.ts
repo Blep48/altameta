@@ -61,3 +61,24 @@ export const sfx = {
   },
   miss: () => tone(90, 0.35, "sawtooth", 0, 0.15),
 };
+
+
+export type MusicStyle = "reaction" | "direction" | "monkey" | "precision" | "flappy" | "dash";
+
+/** Starts a tiny original looping synth motif. Returns a stop function. */
+export function startMusic(style: MusicStyle): () => void {
+  const patterns: Record<MusicStyle, { notes: number[]; beat: number; type: OscillatorType; gain: number }> = {
+    reaction: { notes: [220, 261.63, 293.66, 329.63, 293.66, 261.63, 246.94, 220], beat: 230, type: "triangle", gain: 0.035 },
+    direction: { notes: [220, 233.08, 277.18, 293.66, 277.18, 233.08, 220, 329.63], beat: 190, type: "triangle", gain: 0.032 },
+    monkey: { notes: [196, 207.65, 246.94, 261.63, 311.13, 261.63, 246.94, 207.65], beat: 260, type: "sine", gain: 0.035 },
+    precision: { notes: [110, 116.54, 110, 130.81, 123.47, 116.54, 103.83, 110], beat: 300, type: "sawtooth", gain: 0.022 },
+    flappy: { notes: [392, 523.25, 659.25, 523.25, 440, 587.33, 698.46, 587.33], beat: 170, type: "square", gain: 0.025 },
+    dash: { notes: [130.81, 196, 261.63, 196, 146.83, 220, 293.66, 220], beat: 135, type: "square", gain: 0.028 },
+  };
+  const p = patterns[style];
+  let i = 0;
+  const play = () => { tone(p.notes[i % p.notes.length]!, Math.min(0.16, p.beat / 1400), p.type, 0, p.gain); i++; };
+  play();
+  const timer = window.setInterval(play, p.beat);
+  return () => window.clearInterval(timer);
+}

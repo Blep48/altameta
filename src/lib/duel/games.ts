@@ -17,6 +17,8 @@ export const MINIGAMES: MinigameMeta[] = [
   },
   { id: "direction", name: "DIRECTION", tagline: "Swipe the falling arrows in order. One mistake and you’re out.", icon: "🧭", available: true },
   { id: "memory", name: "MONKEY TEST", tagline: "Memorize the numbered squares, then tap them in order.", icon: "🐒", available: true },
+  { id: "flappy", name: "FLAPPY", tagline: "Tap to fly through a fresh seeded obstacle course.", icon: "🐤", available: true },
+  { id: "dash", name: "NEON DASH", tagline: "Jump over a freshly generated stream of obstacles.", icon: "🔺", available: true },
   {
     id: "precision",
     name: "PRECISION",
