@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Screen } from "@/components/duel/Screen";
 import { useDuel } from "@/lib/duel/provider";
 import { formatEuro } from "@/lib/duel/economy";
+import { ladderEliminations, ladderMultiplier, ladderPrizeUnits } from "@/lib/duel/ladder";
 
 export const Route = createFileRoute("/result")({
   head: () => ({
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/result")({
 });
 
 function Result() {
-  const { lastOutcome, profile, ready, canPlay } = useDuel();
+  const { lastOutcome, profile, ready, canPlay, ladder, cashOutLadder } = useDuel();
   const navigate = useNavigate();
   const [animatedWin, setAnimatedWin] = useState(0);
 
@@ -68,9 +69,9 @@ function Result() {
       </div>
 
       <div className="mt-5 text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{won ? "Winnings" : "Lost"}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{ladder && lastOutcome.gameId===ladder.gameId ? (won ? "Run value · DEMO" : "Run lost") : won ? "Winnings" : "Lost"}</p>
         <p className={`mt-1 font-display text-5xl font-black tabular-nums ${won ? "text-primary text-glow" : "text-destructive"}`}>
-          {won ? formatEuro(animatedWin, true) : formatEuro(lastOutcome.coinDelta, true)}
+          {ladder && lastOutcome.gameId===ladder.gameId ? (won && ladder.active ? formatEuro(ladderPrizeUnits(ladder)) : formatEuro(-ladder.wagerEur*100, true)) : won ? formatEuro(animatedWin, true) : formatEuro(lastOutcome.coinDelta, true)}
         </p>
       </div>
 
@@ -177,6 +178,22 @@ function Result() {
         </section>
       )}
 
+
+      {ladder && lastOutcome.gameId===ladder.gameId && (
+        <section className="mt-7 rounded-3xl border border-primary/60 bg-primary/10 p-5 text-center">
+          {ladder.active && won ? <>
+            <p className="text-[10px] font-bold uppercase tracking-[.25em] text-primary">∞ THE LADDER · STREAK {ladder.streak}</p>
+            <p className="mt-2 font-display text-4xl font-black text-primary">{ladderMultiplier(ladder.streak).toFixed(1)}×</p>
+            <p className="mt-1 text-xs text-muted-foreground">{ladderEliminations(ladder.streak)} players represented · DEMO prize {formatEuro(ladderPrizeUnits(ladder))}</p>
+            <p className="mt-3 text-[11px] text-muted-foreground">Next win → {ladderMultiplier(ladder.streak+1).toFixed(1)}× · {formatEuro(Math.round(ladder.wagerEur*100*ladderMultiplier(ladder.streak+1)))}</p>
+            <button type="button" onClick={()=>navigate({to:"/match",search:{game:ladder.gameId,ladder:"continue"}})} className="mt-4 w-full rounded-2xl bg-primary py-4 font-display text-sm font-black tracking-[.16em] text-primary-foreground">CONTINUE · RISK THE RUN</button>
+            <button type="button" onClick={()=>{cashOutLadder();navigate({to:"/"})}} className="mt-2 w-full rounded-2xl border border-primary py-4 font-display text-sm font-black tracking-[.16em] text-primary">CASH OUT · {formatEuro(ladderPrizeUnits(ladder))}</button>
+          </> : <>
+            <p className="font-display text-xl font-black text-destructive">LADDER RUN OVER</p>
+            <p className="mt-2 text-xs text-muted-foreground">The accumulated DEMO prize was lost.</p>
+          </>}
+        </section>
+      )}
 
       <div className="mt-8 space-y-3">
         <Link

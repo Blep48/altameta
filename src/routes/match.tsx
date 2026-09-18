@@ -10,6 +10,7 @@ export const Route = createFileRoute("/match")({
   validateSearch: (search: Record<string, unknown>) => ({
     game: typeof search["game"] === "string" ? (search["game"] as string) : "reaction",
     friend: search["friend"] === "1",
+    ladder: search["ladder"] === "start" ? "start" : search["ladder"] === "continue" ? "continue" : "",
   }),
   head: () => ({
     meta: [
@@ -24,9 +25,9 @@ export const Route = createFileRoute("/match")({
 
 function Matchmaking() {
   useEffect(() => startMusic("matchmaking"), []);
-  const { game, friend: friendMode } = Route.useSearch();
+  const { game, friend: friendMode, ladder: ladderMode } = Route.useSearch();
   const navigate = useNavigate();
-  const { profile, findMatch, startFriendMatch, cancelMatch } = useDuel();
+  const { profile, findMatch, startFriendMatch, cancelMatch, startLadder, continueLadder, ladder } = useDuel();
   const [found, setFound] = useState<ActiveMatch | null>(null);
   const started = useRef(false);
 
@@ -37,7 +38,7 @@ function Matchmaking() {
 
     const session=friendMode?getFriendSession():null;
     const friend=session?.code ? session : null;
-    const matching = friend ? getFriendChallenge(friend.code).then(ch => {
+    const matching = ladderMode==="start" ? startLadder(game) : ladderMode==="continue" ? continueLadder() : friend ? getFriendChallenge(friend.code).then(ch => {
       if(!ch) throw new Error("Challenge expired");
       const opponentName=friend.role==="creator"?(ch.guest_name||"YOUR FRIEND"):ch.creator_name;
       const opponentAvatar=friend.role==="creator"?(ch.guest_avatar||"🎮"):ch.creator_avatar;
@@ -102,7 +103,7 @@ function Matchmaking() {
           <h1 className="mt-8 font-display text-xl font-bold tracking-[0.25em] text-foreground">
             SEARCHING…
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">Finding an opponent near {profile.rating} MMR</p>
+          <p className="mt-2 text-sm text-muted-foreground">{ladderMode ? `Finding a survivor at the same streak${ladder?.streak ? ` · ${ladder.streak} wins` : ""}` : `Finding an opponent near ${profile.rating} MMR`}</p>
           <button
             type="button"
             onClick={abort}
