@@ -67,7 +67,14 @@ function Result() {
         </p>
       </div>
 
-      <div className="mt-5 text-center">\n        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{won ? "Winnings" : "Lost"}</p>\n        <p className={`mt-1 font-display text-5xl font-black tabular-nums ${won ? "text-primary text-glow" : "text-destructive"}`}>\n          {won ? formatEuro(animatedWin, true) : formatEuro(lastOutcome.coinDelta, true)}\n        </p>\n      </div>\n\n      <section className="mt-6 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+      <div className="mt-5 text-center">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{won ? "Winnings" : "Lost"}</p>
+        <p className={`mt-1 font-display text-5xl font-black tabular-nums ${won ? "text-primary text-glow" : "text-destructive"}`}>
+          {won ? formatEuro(animatedWin, true) : formatEuro(lastOutcome.coinDelta, true)}
+        </p>
+      </div>
+
+      <section className="mt-6 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         <Side
           avatar={profile.avatar}
           name="YOU"
