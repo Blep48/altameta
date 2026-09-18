@@ -27,7 +27,8 @@ function GameSelection() {
  const [selected,setSelected]=useState<MinigameMeta|null>(null);
  const [creating,setCreating]=useState(false); const [share,setShare]=useState<{url:string;code:string}|null>(null);
  const affordable=profile.coins>=wagerEur*100;
- if(selected) return <Screen><TopBar title={selected.name} back="/games"/>
+ if(selected) return <Screen><TopBar title={selected.name}/>
+   <button type="button" onClick={()=>{setSelected(null);setShare(null)}} aria-label="Back to game selection" className="absolute left-5 top-6 grid h-10 w-10 place-items-center rounded-xl border border-border bg-card text-lg text-muted-foreground">←</button>
    <div className="mt-4 flex items-center gap-4 rounded-3xl border border-border bg-card p-5">
     <span className="grid h-20 w-20 shrink-0 place-items-center rounded-2xl bg-secondary text-5xl">{selected.icon}</span>
     <div className="min-w-0"><p className="font-display text-xl font-bold tracking-[0.16em]">{selected.name}</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{selected.tagline}</p></div>
