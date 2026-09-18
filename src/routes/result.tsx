@@ -69,9 +69,9 @@ function Result() {
       </div>
 
       <div className="mt-5 text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{won ? "Winnings" : "Lost"}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{ladder && lastOutcome.gameId===ladder.gameId ? (won ? "Run value · DEMO" : "Run lost") : won ? "Winnings" : "Lost"}</p>
         <p className={`mt-1 font-display text-5xl font-black tabular-nums ${won ? "text-primary text-glow" : "text-destructive"}`}>
-          {won ? formatEuro(animatedWin, true) : formatEuro(lastOutcome.coinDelta, true)}
+          {ladder && lastOutcome.gameId===ladder.gameId ? (won && ladder.active ? formatEuro(ladderPrizeUnits(ladder)) : formatEuro(-ladder.wagerEur*100, true)) : won ? formatEuro(animatedWin, true) : formatEuro(lastOutcome.coinDelta, true)}
         </p>
       </div>
 
