@@ -1,7 +1,7 @@
 name: Verify build
 on:
-  push:
-    branches: [feature/complete-friend-challenges]
+  pull_request:
+    branches: [main]
 jobs:
   build:
     runs-on: ubuntu-latest
