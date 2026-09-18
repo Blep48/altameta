@@ -188,7 +188,7 @@ function ReactionGame() {
         )}
       </button>
 
-      <div className="flex shrink-0 justify-center gap-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]>
+      <div className="flex shrink-0 justify-center gap-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
         {Array.from({ length: TOTAL_ROUNDS }).map((_, i) => {
           const r = rounds[i];
           return (
