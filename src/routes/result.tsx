@@ -29,6 +29,7 @@ function Result() {
   const rhythm = lastOutcome.rhythm;
   const precision = lastOutcome.precision;
   const direction = lastOutcome.direction;
+  const monkey = lastOutcome.monkey;
 
   return (
     <Screen>
@@ -54,8 +55,10 @@ function Result() {
           avatar={profile.avatar}
           name="YOU"
           value={
-            direction
-              ? `${direction.playerArrows}`
+            monkey
+              ? `${monkey.playerLevels}`
+              : direction
+                ? `${direction.playerArrows}`
               : precision
                 ? `${precision.playerPoints}`
                 : rhythm
@@ -69,8 +72,10 @@ function Result() {
           avatar={lastOutcome.opponentAvatar}
           name={lastOutcome.opponentName}
           value={
-            direction
-              ? `${direction.opponentArrows}`
+            monkey
+              ? `${monkey.opponentLevels}`
+              : direction
+                ? `${direction.opponentArrows}`
               : precision
                 ? `${precision.opponentPoints}`
                 : rhythm
@@ -80,9 +85,9 @@ function Result() {
           highlight={!won}
         />
       </section>
-      {(rhythm || precision || direction) && (
+      {(rhythm || precision || direction || monkey) && (
         <p className="mt-2 text-center text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-          {direction ? "Arrows survived" : precision ? "Points scored" : "Notes survived"}
+          {monkey ? "Levels cleared" : direction ? "Arrows survived" : precision ? "Points scored" : "Notes survived"}
         </p>
       )}
 
@@ -102,8 +107,10 @@ function Result() {
 
       <p className="mt-3 text-center text-xs text-muted-foreground tabular-nums">
         Balance {formatEuro(profile.coins)} · Rating {profile.rating}
-        {direction
-          ? ` · ${direction.playerArrows} arrows · Opponent ${direction.opponentArrows}`
+        {monkey
+          ? ` · ${monkey.playerLevels} levels · Opponent ${monkey.opponentLevels}`
+          : direction
+            ? ` · ${direction.playerArrows} arrows · Opponent ${direction.opponentArrows}`
           : precision
             ? ` · ${precision.playerStops} stops · ${precision.perfects} perfect · Opponent ${precision.opponentStops} stops`
           : rhythm
@@ -112,11 +119,12 @@ function Result() {
         {!rhythm &&
           !precision &&
           !direction &&
+          !monkey &&
           lastOutcome.falseStarts > 0 &&
           ` · ${lastOutcome.falseStarts} false start(s)`}
       </p>
 
-      {!rhythm && !precision && !direction && (
+      {!rhythm && !precision && !direction && !monkey && (
         <section className="mt-6">
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
             Round breakdown
