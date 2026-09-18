@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useDuel } from "@/lib/duel/provider";
-import { sfx } from "@/lib/duel/audio";
+import { sfx, startMusic } from "@/lib/duel/audio";
 import { MatchBalance } from "@/components/duel/MatchBalance";
 import {
   MAX_STOPS,
@@ -36,6 +36,7 @@ export const Route = createFileRoute("/play/precision")({
 type Phase = "ready" | "playing" | "over";
 
 function PrecisionGame() {
+  useEffect(() => startMusic("precision"), []);
   const navigate = useNavigate();
   const { activeMatch, finishPrecisionMatch, ready, profile, wagerEur } = useDuel();
 
