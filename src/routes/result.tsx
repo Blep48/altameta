@@ -28,6 +28,7 @@ function Result() {
   const won = lastOutcome.won;
   const rhythm = lastOutcome.rhythm;
   const precision = lastOutcome.precision;
+  const direction = lastOutcome.direction;
 
   return (
     <Screen>
@@ -53,9 +54,11 @@ function Result() {
           avatar={profile.avatar}
           name="YOU"
           value={
-            precision
-              ? `${precision.playerPoints}`
-              : rhythm
+            direction
+              ? `${direction.playerArrows}`
+              : precision
+                ? `${precision.playerPoints}`
+                : rhythm
                 ? `${rhythm.playerNotes}`
                 : `${lastOutcome.playerAvgMs} ms`
           }
@@ -66,18 +69,20 @@ function Result() {
           avatar={lastOutcome.opponentAvatar}
           name={lastOutcome.opponentName}
           value={
-            precision
-              ? `${precision.opponentPoints}`
-              : rhythm
+            direction
+              ? `${direction.opponentArrows}`
+              : precision
+                ? `${precision.opponentPoints}`
+                : rhythm
                 ? `${rhythm.opponentNotes}`
                 : `${lastOutcome.opponentAvgMs} ms`
           }
           highlight={!won}
         />
       </section>
-      {(rhythm || precision) && (
+      {(rhythm || precision || direction) && (
         <p className="mt-2 text-center text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-          {precision ? "Points scored" : "Notes survived"}
+          {direction ? "Arrows survived" : precision ? "Points scored" : "Notes survived"}
         </p>
       )}
 
@@ -97,18 +102,21 @@ function Result() {
 
       <p className="mt-3 text-center text-xs text-muted-foreground tabular-nums">
         Balance {formatEuro(profile.coins)} · Rating {profile.rating}
-        {precision
-          ? ` · ${precision.playerStops} stops · ${precision.perfects} perfect · Opponent ${precision.opponentStops} stops`
+        {direction
+          ? ` · ${direction.playerArrows} arrows · Opponent ${direction.opponentArrows}`
+          : precision
+            ? ` · ${precision.playerStops} stops · ${precision.perfects} perfect · Opponent ${precision.opponentStops} stops`
           : rhythm
             ? ` · Avg timing ${rhythm.avgOffsetMs} ms · Track #${rhythm.seed.toString(36).slice(-6)}`
             : ` · Best round ${lastOutcome.playerBestMs} ms`}
         {!rhythm &&
           !precision &&
+          !direction &&
           lastOutcome.falseStarts > 0 &&
           ` · ${lastOutcome.falseStarts} false start(s)`}
       </p>
 
-      {!rhythm && !precision && (
+      {!rhythm && !precision && !direction && (
         <section className="mt-6">
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
             Round breakdown
