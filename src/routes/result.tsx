@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Screen } from "@/components/duel/Screen";
 import { useDuel } from "@/lib/duel/provider";
 import { formatEuro } from "@/lib/duel/economy";
@@ -31,6 +31,22 @@ function Result() {
   const direction = lastOutcome.direction;
   const monkey = lastOutcome.monkey;
   const survival = lastOutcome.survival;
+  const [animatedWin, setAnimatedWin] = useState(0);
+
+  useEffect(() => {
+    if (!won) { setAnimatedWin(0); return; }
+    const target = Math.max(0, lastOutcome.coinDelta);
+    const started = performance.now();
+    let frame = 0;
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - started) / 500);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setAnimatedWin(Math.round(target * eased));
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [won, lastOutcome.coinDelta]);
 
   return (
     <Screen>
@@ -44,14 +60,14 @@ function Result() {
             won ? "text-primary text-glow" : "text-destructive"
           }`}
         >
-          {won ? "VICTORY" : "DEFEAT"}
+          {won ? "ALTAMETA" : "BASSAMETA"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           {won ? "You took the duel." : "Opponent takes this one."}
         </p>
       </div>
 
-      <section className="mt-6 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+      <div className="mt-5 text-center">\n        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{won ? "Winnings" : "Lost"}</p>\n        <p className={`mt-1 font-display text-5xl font-black tabular-nums ${won ? "text-primary text-glow" : "text-destructive"}`}>\n          {won ? formatEuro(animatedWin, true) : formatEuro(lastOutcome.coinDelta, true)}\n        </p>\n      </div>\n\n      <section className="mt-6 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         <Side
           avatar={profile.avatar}
           name="YOU"
