@@ -2,7 +2,7 @@ import { submitIfFriend } from "@/lib/duel/friend-match";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDuel } from "@/lib/duel/provider";
-import { sfx } from "@/lib/duel/audio";
+import { sfx, startMusic } from "@/lib/duel/audio";
 import { OpponentOutBanner } from "@/components/duel/OpponentOutBanner";
 import { MatchBalance } from "@/components/duel/MatchBalance";
 import {
@@ -36,6 +36,7 @@ const HIT_LINE = 44; // px from the bottom of the lane area
 const NOTE_HEIGHT = 32;
 
 function RhythmGame() {
+  useEffect(() => startMusic("rhythm"), []);
   const navigate = useNavigate();
   const { activeMatch, finishRhythmMatch, ready, profile, wagerEur } = useDuel();
 
