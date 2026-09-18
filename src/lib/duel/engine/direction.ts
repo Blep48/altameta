@@ -18,16 +18,16 @@ export function directionFor(seed: number, index: number): Direction {
 }
 
 export function spawnIntervalMs(index: number): number {
-  return Math.max(310, 900 - Math.floor(index / 6) * 42);
+  return Math.max(220, 680 - Math.floor(index / 5) * 38);
 }
 
 export function travelMs(index: number): number {
-  return Math.max(1050, 2850 - Math.floor(index / 5) * 105);
+  return Math.max(720, 2050 - Math.floor(index / 4) * 90);
 }
 
 export function createDirectionChart(seed: number, count = MAX_ARROWS): DirectionArrow[] {
   const arrows: DirectionArrow[] = [];
-  let t = 1200;
+  let t = 850;
   for (let i = 0; i < count; i++) {
     arrows.push({ index: i, direction: directionFor(seed, i), spawnMs: t });
     t += spawnIntervalMs(i);
