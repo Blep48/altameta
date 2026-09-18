@@ -1,3 +1,4 @@
+import { submitIfFriend } from "@/lib/duel/friend-match";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDuel } from "@/lib/duel/provider";
