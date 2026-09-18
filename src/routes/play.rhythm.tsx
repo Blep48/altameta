@@ -33,6 +33,7 @@ export const Route = createFileRoute("/play/rhythm")({
 type Phase = "ready" | "playing" | "over";
 
 const HIT_LINE = 44; // px from the bottom of the lane area
+const NOTE_HEIGHT = 32;
 
 function RhythmGame() {
   const navigate = useNavigate();
@@ -184,7 +185,8 @@ function RhythmGame() {
         {phase === "playing" &&
           visible.map((n) => {
             const progress = 1 - (n.timeMs - elapsed) / n.approachMs;
-            const bottom = `${Math.max(8, 100 - progress * 88)}%`;
+            const travel = `calc((100% - ${HIT_LINE}px - ${NOTE_HEIGHT / 2}px) * ${Math.max(0, 1 - progress)})`;
+            const bottom = `calc(${HIT_LINE}px - ${NOTE_HEIGHT / 2}px + ${travel})`;
             return (
               <span
                 key={n.index}
