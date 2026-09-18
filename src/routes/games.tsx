@@ -15,7 +15,7 @@ const RULES: Record<string,string> = {
  memory: "Memorize the numbered squares. After 0.5 seconds the numbers are hidden. Tap every square in order, starting from 1. Each cleared level adds another square.",
  precision: "Press STOP while the moving marker is inside the target. The inner zone scores double. One miss ends the duel.",
  flappy: "Tap anywhere to flap upward and pass through the gaps. Touching a pipe, ceiling or floor ends the run. Every match generates a new course from its seed.",
- dash: "Tap anywhere to jump. Clear the blocks for as long as possible. Every match generates a new obstacle stream from its seed.",
+ dash: "Run automatically through a seeded obstacle course. Use JUMP to clear obstacles and FAST FALL to slam back to the ground quickly. The speed increases as your score rises.",
 };
 
 function GameSelection() {
@@ -52,7 +52,7 @@ function GamePreview({id}:{id:string}){const b="relative h-12 w-16 overflow-hidd
  if(id==="direction")return <span className={b}><span className="absolute inset-0 grid place-items-center text-2xl font-bold text-primary">↓</span></span>;
  if(id==="memory")return <span className={b}><span className="absolute left-1 top-1 grid h-5 w-5 place-items-center rounded bg-secondary text-[9px] font-bold">1</span><span className="absolute right-1 top-3 grid h-5 w-5 place-items-center rounded bg-secondary text-[9px] font-bold">3</span><span className="absolute bottom-1 left-6 grid h-5 w-5 place-items-center rounded bg-primary/30 text-[9px] font-bold">2</span></span>;
  if(id==="flappy")return <span className={b}><span className="absolute left-2 top-5 text-base">🐤</span><span className="absolute right-3 top-0 h-4 w-2 bg-primary"/><span className="absolute right-3 bottom-0 h-4 w-2 bg-primary"/></span>;
- if(id==="dash")return <span className={b}><span className="absolute bottom-2 left-2 h-3 w-3 rotate-45 bg-primary"/><span className="absolute bottom-1 right-2 h-5 w-3 bg-secondary"/></span>;
+ if(id==="dash")return <span className={b}><span className="absolute bottom-1 left-2 text-xl">🦖</span><span className="absolute bottom-1 right-2 text-xl">🌵</span></span>;
  if(id==="precision")return <span className={b}><span className="absolute left-2 right-2 top-1/2 h-3 -translate-y-1/2 rounded bg-primary/25"/><span className="absolute left-1/2 top-2 bottom-2 w-px bg-foreground"/></span>;
  return <span className={b}/>;
 }
