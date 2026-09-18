@@ -16,7 +16,7 @@ export const MINIGAMES: MinigameMeta[] = [
     available: true,
   },
   { id: "direction", name: "DIRECTION", tagline: "Swipe the falling arrows in order. One mistake and you’re out.", icon: "🧭", available: true },
-  { id: "memory", name: "MEMORY", tagline: "Repeat the sequence, faster each time.", icon: "🧠", available: false },
+  { id: "memory", name: "MONKEY TEST", tagline: "Memorize the numbered squares, then tap them in order.", icon: "🐒", available: true },
   {
     id: "precision",
     name: "PRECISION",
