@@ -20,7 +20,7 @@ export const MINIGAMES: MinigameMeta[] = [
   { id: "flappy", name: "FLAPPY", tagline: "Tap to fly through a fresh seeded obstacle course.", icon: "🐤", available: true },
   { id: "dash", name: "DINO RUN", tagline: "Jump and fast-fall through a seeded endless obstacle run.", icon: "🦖", available: true },
   { id: "stack", name: "STACK", tagline: "Drop moving blocks and build the tallest tower.", icon: "🧱", available: true },
-  { id: "penalty", name: "PENALTY", tagline: "Pick a corner. Five kicks, then sudden death.", icon: "⚽", available: true },
+  { id: "knife", name: "KNIFE IT", tagline: "Throw knives into the spinning target without hitting another blade.", icon: "🔪", available: true },
   {
     id: "precision",
     name: "PRECISION",
