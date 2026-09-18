@@ -91,6 +91,15 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const saveHighscore = useCallback((gameId: string, score: number, lowerIsBetter = false) => {
+    setProfile(prev => {
+      const highscores = { ...(prev.highscores ?? {}) };
+      const old = highscores[gameId];
+      if (old == null || (lowerIsBetter ? score < old : score > old)) highscores[gameId] = score;
+      const next = { ...prev, highscores }; storage.write(STORAGE_KEYS.profile, next); return next;
+    });
+  }, []);
+
   const toggleMuted = useCallback(() => {
     setMutedState((prev) => {
       const next = !prev;
@@ -143,6 +152,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     (rounds: RoundResult[]) => {
       if (!activeMatch) return null;
       const score = scoreRounds(rounds);
+      saveHighscore("reaction", score.playerAvgMs, true);
       const outcome: MatchOutcome = {
         id: activeMatch.id,
         gameId: activeMatch.gameId,
@@ -182,13 +192,14 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       setActiveMatch(null);
       return outcome;
     },
-    [activeMatch, wagerEur],
+    [activeMatch, wagerEur, saveHighscore],
   );
 
   const finishRhythmMatch: DuelContextValue["finishRhythmMatch"] = useCallback(
     ({ playerNotes, opponentNotes, offsets }) => {
       if (!activeMatch) return null;
       const score = scoreRhythm({ playerNotes, opponentNotes, offsets });
+      saveHighscore("rhythm", score.playerNotes);
       const outcome: MatchOutcome = {
         id: activeMatch.id,
         gameId: activeMatch.gameId,
@@ -241,6 +252,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     ({ player, opponent }) => {
       if (!activeMatch) return null;
       const score = scorePrecision({ player, opponent });
+      saveHighscore("precision", score.playerPoints);
       const outcome: MatchOutcome = {
         id: activeMatch.id,
         gameId: activeMatch.gameId,
@@ -295,6 +307,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     ({ playerArrows, opponentArrows }) => {
       if (!activeMatch) return null;
       const score = scoreDirection(playerArrows, opponentArrows);
+      saveHighscore("direction", score.playerArrows);
       const outcome: MatchOutcome = {
         id: activeMatch.id,
         gameId: activeMatch.gameId,
@@ -334,6 +347,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     ({ playerLevels, opponentLevels }) => {
       if (!activeMatch) return null;
       const score = scoreMonkey(playerLevels, opponentLevels);
+      saveHighscore("memory", score.playerLevels);
       const outcome: MatchOutcome = {
         id: activeMatch.id, gameId: activeMatch.gameId,
         opponentName: activeMatch.opponent.username, opponentAvatar: activeMatch.opponent.avatar,
@@ -349,13 +363,14 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       });
       setHistory(prev => { const next=[outcome,...prev].slice(0,50);storage.write(STORAGE_KEYS.history,next);return next;});
       setLastOutcome(outcome); setActiveMatch(null); return outcome;
-    }, [activeMatch,wagerEur],
+    }, [activeMatch,wagerEur,saveHighscore],
   );
 
   const finishSurvivalMatch: DuelContextValue["finishSurvivalMatch"] = useCallback(
     ({ playerScore, opponentScore }) => {
       if (!activeMatch) return null;
       const won = playerScore > opponentScore;
+      saveHighscore(activeMatch.gameId, playerScore);
       const outcome: MatchOutcome = {
         id: activeMatch.id, gameId: activeMatch.gameId,
         opponentName: activeMatch.opponent.username, opponentAvatar: activeMatch.opponent.avatar,
