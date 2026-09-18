@@ -18,7 +18,7 @@ export const Route = createFileRoute("/result")({
 
 function Result() {
   const { lastOutcome, profile, ready, canPlay } = useDuel();
-  const navigate = useNavigate();
+  const navigate = useNavigate();\n  const [animatedWin, setAnimatedWin] = useState(0);
 
   useEffect(() => {
     if (ready && !lastOutcome) navigate({ to: "/" });
@@ -46,7 +46,7 @@ function Result() {
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [won, lastOutcome.coinDelta]);
+  }, [lastOutcome]);
 
   return (
     <Screen>
