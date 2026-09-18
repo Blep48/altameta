@@ -152,13 +152,13 @@ function RhythmGame() {
   });
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      <div className="px-5 pt-5 text-center">
+    <main className="mx-auto flex h-[100dvh] w-full max-w-md flex-col overflow-hidden overscroll-none bg-background">
+      <div className="shrink-0 px-5 pt-3 text-center">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">How to play</p>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Tap the left or right lane when each note reaches the line. One wrong lane or missed note ends your run.</p>
       </div>
       <MatchBalance coins={profile.coins} wagerEur={wagerEur} />
-      <header className="grid grid-cols-3 gap-2 px-5 pt-3 text-center">
+      <header className="grid shrink-0 grid-cols-3 gap-2 px-5 pt-2 text-center">
         <Meter label="Notes" value={`${hits}`} />
         <Meter label="Level" value={`${level + 1}`} />
         <Meter
@@ -167,7 +167,7 @@ function RhythmGame() {
         />
       </header>
 
-      <div className="flex items-center justify-between px-5 pt-3 text-xs text-muted-foreground">
+      <div className="flex shrink-0 items-center justify-between px-5 pt-2 text-xs text-muted-foreground">
         <span className="truncate">vs {activeMatch.opponent.username}</span>
         <span className="tabular-nums">track #{seed.toString(36).slice(-6)}</span>
       </div>
@@ -227,7 +227,7 @@ function RhythmGame() {
         )}
       </section>
 
-      <div className="grid grid-cols-2 gap-3 px-5 pb-8 pt-4">
+      <div className="grid grid-cols-2 gap-3 px-5 pb-3 pt-2">
         {[0, 1].map((lane) => (
           <button
             key={lane}
