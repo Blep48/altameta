@@ -6,16 +6,31 @@ let selectedGameTrack: string | null = null;
 export type MusicStyle = "menu" | "matchmaking" | "reaction" | "rhythm" | "direction" | "monkey" | "precision" | "flappy" | "dash" | "stack" | "knife";
 
 const TRACKS = {
-  menu: "/jade_path_through_the_clouds.mp3",
-  secret: "/tarantella_d_a_vita.mp3",
+  menu: new URL("../../../jade_path_through_the_clouds.mp3", import.meta.url).href,
+  secret: new URL("../../../tarantella_d_a_vita.mp3", import.meta.url).href,
   games: [
-    "/the_frozen_chase.mp3",
-    "/the_seventh_gate.mp3",
-    "/tropical_joypad.mp3",
-    "/salento_chase.mp3",
-    "/balalaika_boss_battle.mp3",
+    new URL("../../../the_frozen_chase.mp3", import.meta.url).href,
+    new URL("../../../the_seventh_gate.mp3", import.meta.url).href,
+    new URL("../../../tropical_joypad.mp3", import.meta.url).href,
+    new URL("../../../salento_chase.mp3", import.meta.url).href,
+    new URL("../../../balalaika_boss_battle.mp3", import.meta.url).href,
   ],
 } as const;
+
+let unlockBound = false;
+
+function bindAudioUnlock() {
+  if (unlockBound || typeof window === "undefined") return;
+  unlockBound = true;
+  const unlock = () => {
+    window.removeEventListener("pointerdown", unlock);
+    window.removeEventListener("keydown", unlock);
+    unlockBound = false;
+    if (!muted && desiredMusic) startMusic(desiredMusic);
+  };
+  window.addEventListener("pointerdown", unlock, { passive: true });
+  window.addEventListener("keydown", unlock);
+}
 
 export function isMuted() { return muted; }
 
@@ -47,7 +62,7 @@ function playTrack(src: string, volume: number) {
   audio.loop = true;
   audio.preload = "auto";
   audio.volume = volume;
-  void audio.play().catch(() => {});
+  void audio.play().catch(() => bindAudioUnlock());
   return audio;
 }
 
@@ -55,6 +70,7 @@ export function startMusic(style: MusicStyle): () => void {
   desiredMusic = style;
   stopMusic();
   if (typeof window === "undefined" || muted) return () => {};
+  bindAudioUnlock();
 
   if (style === "menu") {
     selectedGameTrack = null;
