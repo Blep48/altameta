@@ -52,7 +52,6 @@ function RhythmGame() {
 
   const startAt = useRef(0);
   const nextIndex = useRef(0);
-  const soundedIndex = useRef(0);
   const offsets = useRef<number[]>([]);
   const finished = useRef(false);
   const raf = useRef<number | null>(null);
@@ -94,12 +93,6 @@ function RhythmGame() {
         const t = performance.now() - startAt.current;
         setElapsed(t);
 
-        // The chart is the music: each note sounds as it crosses the line.
-        while (soundedIndex.current < notes.length && notes[soundedIndex.current]!.timeMs <= t) {
-          sfx.note(notes[soundedIndex.current]!.freq);
-          soundedIndex.current += 1;
-        }
-
         const pending = notes[nextIndex.current];
         if (!pending) {
           end(notes.length);
@@ -127,10 +120,13 @@ function RhythmGame() {
     const note = notes[nextIndex.current];
     if (!note) return;
     const diff = note.timeMs - t;
-    // Taps ahead of the note are simply ignored — only wrong-lane or
-    // fully-missed notes end the run.
-    if (diff > note.windowMs) return;
+    if (Math.abs(diff) > note.windowMs || note.lane !== lane) {
+      setFlash("miss");
+      end(nextIndex.current);
+      return;
+    }
     if (note.lane === lane) {
+      sfx.note(note.freq);
       offsets.current.push(Math.round(Math.abs(diff)));
       nextIndex.current += 1;
       setHits((h) => h + 1);
@@ -138,8 +134,6 @@ function RhythmGame() {
       setTimeout(() => setFlash(null), 90);
       return;
     }
-    setFlash("miss");
-    end(nextIndex.current);
   };
 
   if (!activeMatch) return null;
