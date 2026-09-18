@@ -47,7 +47,7 @@ function Result() {
           {won ? "VICTORY" : "DEFEAT"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          {won ? "Faster hands win duels." : "Too slow this time."}
+          {won ? "You took the duel." : "Opponent takes this one."}
         </p>
       </div>
 
@@ -92,7 +92,7 @@ function Result() {
       </section>
       {(rhythm || precision || direction || monkey || survival) && (
         <p className="mt-2 text-center text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-          {survival ? "Obstacles cleared" : monkey ? "Levels cleared" : direction ? "Arrows survived" : precision ? "Points scored" : "Notes survived"}
+          {survival ? (lastOutcome.gameId === "knife" ? "Knives landed" : lastOutcome.gameId === "stack" ? "Blocks stacked" : lastOutcome.gameId === "flappy" ? "Pipes cleared" : "Obstacles cleared") : monkey ? "Levels cleared" : direction ? "Arrows survived" : precision ? "Points scored" : "Notes survived"}
         </p>
       )}
 
@@ -113,7 +113,7 @@ function Result() {
       <p className="mt-3 text-center text-xs text-muted-foreground tabular-nums">
         Balance {formatEuro(profile.coins)} · Rating {profile.rating}
         {survival
-          ? ` · ${survival.playerScore} obstacles · Opponent ${survival.opponentScore} · Seed #${survival.seed.toString(36).slice(-6)}`
+          ? ` · ${survival.playerScore} ${lastOutcome.gameId === "knife" ? "knives" : lastOutcome.gameId === "stack" ? "blocks" : lastOutcome.gameId === "flappy" ? "pipes" : "obstacles"} · Opponent ${survival.opponentScore} · Seed #${survival.seed.toString(36).slice(-6)}`
           : monkey
           ? ` · ${monkey.playerLevels} levels · Opponent ${monkey.opponentLevels}`
           : direction
