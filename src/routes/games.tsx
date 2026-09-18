@@ -1,105 +1,54 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { Screen, TopBar } from "@/components/duel/Screen";
 import { MINIGAMES } from "@/lib/duel/games";
 import { useDuel } from "@/lib/duel/provider";
 import { formatEuro, WAGER_OPTIONS_EUR } from "@/lib/duel/economy";
+import type { MinigameMeta } from "@/lib/duel/types";
 
-export const Route = createFileRoute("/games")({
-  head: () => ({
-    meta: [
-      { title: "Choose your minigame — DUEL" },
-      {
-        name: "description",
-        content: "Pick a DUEL minigame: Reaction is live, Rhythm, Direction, Memory and Precision are next.",
-      },
-      { property: "og:title", content: "Choose your minigame — DUEL" },
-      { property: "og:description", content: "Reaction duels are live. More minigames coming soon." },
-    ],
-  }),
-  component: GameSelection,
-});
+export const Route = createFileRoute("/games")({ component: GameSelection });
+
+const RULES: Record<string,string> = {
+ reaction: "Wait for the arena to turn green, then tap as fast as possible. You play 5 rounds. Tapping too early gives a penalty.",
+ rhythm: "Tap the left or right lane when each note reaches the hit line. A wrong lane or missed note ends your run.",
+ direction: "Swipe in the direction shown by the lowest falling arrow. A wrong swipe or an arrow reaching the danger line ends your run.",
+ memory: "Memorize the numbered squares. After 0.5 seconds the numbers are hidden. Tap every square in order, starting from 1. Each cleared level adds another square.",
+ precision: "Press STOP while the moving marker is inside the target. The inner zone scores double. One miss ends the duel.",
+};
 
 function GameSelection() {
-  const navigate = useNavigate();
-  const { profile, canPlay, wagerEur, setWagerEur } = useDuel();
-
-  return (
-    <Screen>
-      <TopBar title="SELECT GAME" back="/" />
-      <p className="text-center text-xs uppercase tracking-[0.2em] text-muted-foreground">
-        Balance {formatEuro(profile.coins)}
-      </p>
-
-      <section className="mt-5 rounded-2xl border border-border bg-card p-4">
-        <p className="text-center text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-          Choose stake
-        </p>
-        <div className="mt-3 grid grid-cols-4 gap-2">
-          {WAGER_OPTIONS_EUR.map((amount) => {
-            const affordable = profile.coins >= amount * 100;
-            return (
-              <button
-                key={amount}
-                type="button"
-                disabled={!affordable}
-                onClick={() => setWagerEur(amount)}
-                className={`rounded-xl border px-2 py-3 font-display text-sm font-bold tabular-nums transition-transform active:scale-95 disabled:opacity-30 ${
-                  wagerEur === amount
-                    ? "border-primary bg-primary/15 text-primary neon-glow"
-                    : "border-border bg-background text-foreground"
-                }`}
-              >
-                €{amount}
-              </button>
-            );
-          })}
-        </div>
-        <p className="mt-3 text-center text-xs text-muted-foreground">
-          Selected stake <span className="font-semibold text-primary">€{wagerEur}</span>
-        </p>
-      </section>
-
-      <ul className="mt-6 space-y-3">
-        {MINIGAMES.map((g, i) => (
-          <li key={g.id} className="animate-rise" style={{ animationDelay: `${i * 50}ms` }}>
-            <button
-              type="button"
-              disabled={!g.available || !canPlay}
-              onClick={() => navigate({ to: "/match", search: { game: g.id } })}
-              className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 rounded-2xl border border-border bg-card px-4 py-5 text-left transition-transform duration-150 active:scale-[0.98] disabled:opacity-45"
-            >
-              <span className="flex shrink-0 items-center gap-2">
-                <span className="grid h-12 w-12 place-items-center rounded-xl bg-secondary text-2xl">{g.icon}</span>
-                <GamePreview id={g.id} />
-              </span>
-              <span className="min-w-0">
-                <span className="block font-display text-lg font-bold tracking-[0.18em]">
-                  {g.name}
-                </span>
-                <span className="block truncate text-xs text-muted-foreground">{g.tagline}</span>
-              </span>
-              <span
-                className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.15em] ${
-                  g.available
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-muted-foreground"
-                }`}
-              >
-                {g.available ? "Play" : "Soon"}
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </Screen>
-  );
+ const navigate=useNavigate();
+ const {profile,wagerEur,setWagerEur}=useDuel();
+ const [selected,setSelected]=useState<MinigameMeta|null>(null);
+ const affordable=profile.coins>=wagerEur*100;
+ if(selected) return <Screen><TopBar title={selected.name} back="/games"/>
+   <div className="mt-4 flex items-center gap-4 rounded-3xl border border-border bg-card p-5">
+    <span className="grid h-20 w-20 shrink-0 place-items-center rounded-2xl bg-secondary text-5xl">{selected.icon}</span>
+    <div className="min-w-0"><p className="font-display text-xl font-bold tracking-[0.16em]">{selected.name}</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{selected.tagline}</p></div>
+   </div>
+   <section className="mt-4 rounded-2xl border border-border bg-card p-4">
+    <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">How to play</p>
+    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{RULES[selected.id]}</p>
+   </section>
+   <section className="mt-4 rounded-2xl border border-border bg-card p-4">
+    <div className="flex items-center justify-between"><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Choose stake</p><p className="text-xs text-muted-foreground">Balance <span className="font-bold text-primary">{formatEuro(profile.coins)}</span></p></div>
+    <div className="mt-3 grid grid-cols-4 gap-2">{WAGER_OPTIONS_EUR.map(a=><button key={a} type="button" disabled={profile.coins<a*100} onClick={()=>setWagerEur(a)} className={`rounded-xl border px-2 py-3 font-display text-sm font-bold disabled:opacity-30 ${wagerEur===a?"border-primary bg-primary/15 text-primary":"border-border bg-background"}`}>€{a}</button>)}</div>
+   </section>
+   <button type="button" disabled={!affordable} onClick={()=>navigate({to:"/match",search:{game:selected.id}})} className="mt-5 w-full rounded-3xl bg-primary py-6 font-display text-xl font-bold tracking-[0.25em] text-primary-foreground disabled:opacity-30">FIND OPPONENT · €{wagerEur}</button>
+ </Screen>;
+ return <Screen><TopBar title="SELECT GAME" back="/"/><p className="text-center text-xs uppercase tracking-[0.2em] text-muted-foreground">Balance {formatEuro(profile.coins)}</p>
+  <ul className="mt-6 space-y-3">{MINIGAMES.map((g,i)=><li key={g.id} className="animate-rise" style={{animationDelay:`${i*50}ms`}}><button type="button" disabled={!g.available} onClick={()=>setSelected(g)} className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-border bg-card px-3 py-4 text-left active:scale-[0.98] disabled:opacity-45">
+   <span className="flex shrink-0 items-center gap-2"><span className="grid h-12 w-12 place-items-center rounded-xl bg-secondary text-2xl">{g.icon}</span><GamePreview id={g.id}/></span>
+   <span className="min-w-0"><span className="block font-display text-base font-bold tracking-[0.12em]">{g.name}</span><span className="block truncate text-xs text-muted-foreground">{g.tagline}</span></span>
+   <span className="rounded-full bg-primary px-3 py-1 text-[10px] font-bold uppercase text-primary-foreground">{g.available?"Open":"Soon"}</span>
+  </button></li>)}</ul>
+ </Screen>;
 }
-
-function GamePreview({ id }: { id: string }) {
-  const base = "relative h-12 w-16 overflow-hidden rounded-xl border border-border bg-background";
-  if (id === "reaction") return <span className={base}><span className="absolute inset-2 rounded-lg bg-primary/70" /><span className="absolute inset-0 grid place-items-center text-[8px] font-black tracking-wider text-primary-foreground">TAP</span></span>;
-  if (id === "rhythm") return <span className={base}><span className="absolute inset-y-0 left-1/2 w-px bg-border" /><span className="absolute bottom-2 left-1 right-1 h-px bg-primary" /><span className="absolute left-2 top-2 h-2 w-5 rounded bg-primary" /><span className="absolute right-2 top-6 h-2 w-5 rounded bg-primary" /></span>;
-  if (id === "direction") return <span className={base}><span className="absolute left-1/2 top-1 -translate-x-1/2 text-lg font-bold text-primary">↓</span><span className="absolute bottom-2 left-1 right-1 border-t border-dashed border-destructive" /></span>;
-  if (id === "precision") return <span className={base}><span className="absolute left-2 right-2 top-1/2 h-3 -translate-y-1/2 rounded bg-primary/25" /><span className="absolute left-[42%] top-1/2 h-3 w-3 -translate-y-1/2 rounded bg-accent/70" /><span className="absolute left-[54%] top-2 bottom-2 w-px bg-foreground" /></span>;
-  return <span className={base}><span className="absolute inset-0 grid place-items-center text-[9px] uppercase tracking-wider text-muted-foreground">Soon</span></span>;
+function GamePreview({id}:{id:string}){const b="relative h-12 w-16 overflow-hidden rounded-xl border border-border bg-background";
+ if(id==="reaction")return <span className={b}><span className="absolute inset-2 rounded-lg bg-primary/70"/><span className="absolute inset-0 grid place-items-center text-[8px] font-black">TAP</span></span>;
+ if(id==="rhythm")return <span className={b}><span className="absolute inset-y-0 left-1/2 w-px bg-border"/><span className="absolute bottom-2 left-1 right-1 h-px bg-primary"/><span className="absolute left-2 top-2 h-2 w-5 rounded bg-primary"/><span className="absolute right-2 top-6 h-2 w-5 rounded bg-primary"/></span>;
+ if(id==="direction")return <span className={b}><span className="absolute inset-0 grid place-items-center text-2xl font-bold text-primary">↓</span></span>;
+ if(id==="memory")return <span className={b}><span className="absolute left-1 top-1 grid h-5 w-5 place-items-center rounded bg-secondary text-[9px] font-bold">1</span><span className="absolute right-1 top-3 grid h-5 w-5 place-items-center rounded bg-secondary text-[9px] font-bold">3</span><span className="absolute bottom-1 left-6 grid h-5 w-5 place-items-center rounded bg-primary/30 text-[9px] font-bold">2</span></span>;
+ if(id==="precision")return <span className={b}><span className="absolute left-2 right-2 top-1/2 h-3 -translate-y-1/2 rounded bg-primary/25"/><span className="absolute left-1/2 top-2 bottom-2 w-px bg-foreground"/></span>;
+ return <span className={b}/>;
 }
