@@ -19,6 +19,8 @@ export const MINIGAMES: MinigameMeta[] = [
   { id: "memory", name: "MONKEY TEST", tagline: "Memorize the numbered squares, then tap them in order.", icon: "🐒", available: true },
   { id: "flappy", name: "FLAPPY", tagline: "Tap to fly through a fresh seeded obstacle course.", icon: "🐤", available: true },
   { id: "dash", name: "DINO RUN", tagline: "Jump and fast-fall through a seeded endless obstacle run.", icon: "🦖", available: true },
+  { id: "stack", name: "STACK", tagline: "Drop moving blocks and build the tallest tower.", icon: "🧱", available: true },
+  { id: "penalty", name: "PENALTY", tagline: "Pick a corner. Five kicks, then sudden death.", icon: "⚽", available: true },
   {
     id: "precision",
     name: "PRECISION",
