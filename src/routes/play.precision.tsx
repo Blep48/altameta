@@ -1,3 +1,4 @@
+import { submitIfFriend } from "@/lib/duel/friend-match";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useDuel } from "@/lib/duel/provider";
@@ -79,6 +80,7 @@ function PrecisionGame() {
     if (raf.current) cancelAnimationFrame(raf.current);
     setPhase("over");
     sfx.miss();
+    if(activeMatch?.friend){void submitIfFriend(activeMatch,pointsRef.current).then(()=>navigate({to:"/challenge/$code",params:{code:activeMatch.friend!.code}}));return;}
     const outcome = finishPrecisionMatch({
       player: {
         stops: stopsRef.current,
