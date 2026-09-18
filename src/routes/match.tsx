@@ -35,13 +35,14 @@ function Matchmaking() {
     if (started.current) return () => clearInterval(beeps);
     started.current = true;
 
-    const friend=friendMode?getFriendSession():null;
+    const session=friendMode?getFriendSession():null;
+    const friend=session?.code ? session : null;
     const matching = friend ? getFriendChallenge(friend.code).then(ch => {
       if(!ch) throw new Error("Challenge expired");
       const opponentName=friend.role==="creator"?(ch.guest_name||"YOUR FRIEND"):ch.creator_name;
       const opponentAvatar=friend.role==="creator"?(ch.guest_avatar||"🎮"):ch.creator_avatar;
       return startFriendMatch({gameId:game,seed:ch.seed,code:friend.code,token:friend.token,role:friend.role,opponentName,opponentAvatar});
-    }) : findMatch(game);
+    }) : friendMode ? Promise.reject(new Error("Missing friend challenge session")) : findMatch(game);
     matching
       .then((match) => {
         setFound(match);
