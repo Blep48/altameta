@@ -1,3 +1,4 @@
+import { submitIfFriend } from "@/lib/duel/friend-match";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDuel } from "@/lib/duel/provider";
@@ -52,7 +53,7 @@ function DirectionGame() {
     setPhase("over");
     setFlash("miss");
     sfx.miss();
-    const outcome = finishDirectionMatch({ playerArrows: count, opponentArrows: opponentOut });
+    if(activeMatch.friend){void submitIfFriend(activeMatch,count).then(()=>navigate({to:"/challenge/$code",params:{code:activeMatch.friend!.code}}));return;}const outcome = finishDirectionMatch({ playerArrows: count, opponentArrows: opponentOut });
     setTimeout(() => {
       if (outcome) {
         outcome.won ? sfx.win() : sfx.lose();
