@@ -9,6 +9,7 @@ import { getFriendChallenge, getFriendSession } from "@/lib/duel/friend-challeng
 export const Route = createFileRoute("/match")({
   validateSearch: (search: Record<string, unknown>) => ({
     game: typeof search["game"] === "string" ? (search["game"] as string) : "reaction",
+    friend: search["friend"] === "1",
   }),
   head: () => ({
     meta: [
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/match")({
 });
 
 function Matchmaking() {
-  const { game } = Route.useSearch();
+  const { game, friend: friendMode } = Route.useSearch();
   const navigate = useNavigate();
   const { profile, findMatch, startFriendMatch, cancelMatch } = useDuel();
   const [found, setFound] = useState<ActiveMatch | null>(null);
@@ -33,7 +34,7 @@ function Matchmaking() {
     if (started.current) return () => clearInterval(beeps);
     started.current = true;
 
-    const friend=getFriendSession();
+    const friend=friendMode?getFriendSession():null;
     const matching = friend ? getFriendChallenge(friend.code).then(ch => {
       if(!ch) throw new Error("Challenge expired");
       const opponentName=friend.role==="creator"?(ch.guest_name||"YOUR FRIEND"):ch.creator_name;
