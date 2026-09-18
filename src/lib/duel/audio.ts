@@ -17,7 +17,28 @@ const TRACKS = {
   ],
 } as const;
 
-let unlockBound = false;\nlet visibilityBound = false;\n\nfunction bindVisibilityPause() {\n  if (visibilityBound || typeof document === "undefined") return;\n  visibilityBound = true;\n  document.addEventListener("visibilitychange", () => {\n    if (document.hidden) {\n      music?.pause();\n      return;\n    }\n    if (!muted && desiredMusic && music) {\n      void music.play().catch(() => bindAudioUnlock());\n    }\n  });\n  window.addEventListener("pagehide", () => music?.pause());\n  window.addEventListener("pageshow", () => {\n    if (!document.hidden && !muted && desiredMusic && music) {\n      void music.play().catch(() => bindAudioUnlock());\n    }\n  });\n}
+let unlockBound = false;
+let visibilityBound = false;
+
+function bindVisibilityPause() {
+  if (visibilityBound || typeof document === "undefined") return;
+  visibilityBound = true;
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      music?.pause();
+      return;
+    }
+    if (!muted && desiredMusic && music) {
+      void music.play().catch(() => bindAudioUnlock());
+    }
+  });
+  window.addEventListener("pagehide", () => music?.pause());
+  window.addEventListener("pageshow", () => {
+    if (!document.hidden && !muted && desiredMusic && music) {
+      void music.play().catch(() => bindAudioUnlock());
+    }
+  });
+}
 
 function bindAudioUnlock() {
   if (unlockBound || typeof window === "undefined") return;
