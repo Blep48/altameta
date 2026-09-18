@@ -434,7 +434,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
         survival: { seed: activeMatch.seed, playerScore, opponentScore },
       };
       setProfile(prev => {
-        const next = applyMatchToProfile(prev,{won,ratingDelta:outcome.ratingDelta,settlement:settlementAmount(won,wagerEur),bestRoundMs:null});
+        const next = applyMatchToProfile(prev,{won,ratingDelta:outcome.ratingDelta,settlement:settlementForMode(won,wagerEur),bestRoundMs:null});
         storage.write(STORAGE_KEYS.profile,next); return next;
       });
       setHistory(prev => { const next=[outcome,...prev].slice(0,50);storage.write(STORAGE_KEYS.history,next);return next;});
@@ -476,6 +476,10 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       wagerEur,
       setWagerEur,
       canPlay: canAfford(profile.coins, wagerEur),
+      ladder,
+      startLadder,
+      continueLadder,
+      cashOutLadder,
     }),
     [
       ready,
