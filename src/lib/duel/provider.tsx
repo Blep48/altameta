@@ -31,6 +31,7 @@ interface DuelContextValue {
   updateProfile: (patch: Partial<Pick<PlayerProfile, "username" | "avatar">>) => void;
   /** Takes the selected demo wager and finds an opponent. */
   findMatch: (gameId: string) => Promise<ActiveMatch>;
+  startFriendMatch: (args:{gameId:string;seed:number;code:string;token:string;role:"creator"|"guest";opponentName:string;opponentAvatar:string}) => ActiveMatch;
   cancelMatch: () => void;
   finishMatch: (rounds: RoundResult[]) => MatchOutcome | null;
   finishRhythmMatch: (args: {
@@ -117,6 +118,11 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     },
     [persistProfile, profile, wagerEur],
   );
+
+  const startFriendMatch: DuelContextValue["startFriendMatch"] = useCallback((args) => {
+    const match: ActiveMatch = { id: `friend-${args.code}`, gameId: args.gameId, seed: args.seed, startedAt: Date.now(), friend:{code:args.code,token:args.token,role:args.role}, opponent:{id:"friend",username:args.opponentName,avatar:args.opponentAvatar,rating:profile.rating,meanReactionMs:300,varianceMs:40} };
+    setActiveMatch(match); return match;
+  }, [profile.rating]);
 
   const cancelMatch = useCallback(() => {
     abortRef.current?.abort();
@@ -388,6 +394,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       toggleMuted,
       updateProfile,
       findMatch,
+      startFriendMatch,
       cancelMatch,
       finishMatch,
       finishRhythmMatch,
@@ -410,6 +417,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       toggleMuted,
       updateProfile,
       findMatch,
+      startFriendMatch,
       cancelMatch,
       finishMatch,
       finishRhythmMatch,
