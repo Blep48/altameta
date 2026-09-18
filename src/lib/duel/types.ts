@@ -79,6 +79,8 @@ export interface MatchOutcome {
   playerBestMs: number;
   falseStarts: number;
   won: boolean;
+  tied?: boolean;
+  friendChallengeCode?: string;
   coinDelta: number;
   /** Demo wager selected for this match, expressed in euros. */
   wagerEur: number;

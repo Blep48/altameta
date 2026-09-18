@@ -19,6 +19,7 @@ import { scoreDirection } from "./engine/direction";
 import { scoreMonkey } from "./engine/monkey";
 import { setMuted as setAudioMuted } from "./audio";
 import type { ActiveMatch, MatchOutcome, PlayerProfile, RoundResult } from "./types";
+import type { FriendChallenge } from "./friend-challenges";
 
 interface DuelContextValue {
   ready: boolean;
@@ -32,6 +33,8 @@ interface DuelContextValue {
   /** Takes the selected demo wager and finds an opponent. */
   findMatch: (gameId: string) => Promise<ActiveMatch>;
   startFriendMatch: (args:{gameId:string;seed:number;code:string;token:string;role:"creator"|"guest";opponentName:string;opponentAvatar:string}) => ActiveMatch;
+  reserveFriendWager: (code:string,wagerEur:number) => boolean;
+  settleFriendChallenge: (challenge:FriendChallenge,role:"creator"|"guest") => void;
   cancelMatch: () => void;
   finishMatch: (rounds: RoundResult[]) => MatchOutcome | null;
   finishRhythmMatch: (args: {
@@ -132,6 +135,37 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     const match: ActiveMatch = { id: `friend-${args.code}`, gameId: args.gameId, seed: args.seed, startedAt: Date.now(), friend:{code:args.code,token:args.token,role:args.role}, opponent:{id:"friend",username:args.opponentName,avatar:args.opponentAvatar,rating:profile.rating,meanReactionMs:300,varianceMs:40} };
     setActiveMatch(match); return match;
   }, [profile.rating]);
+
+  const reserveFriendWager = useCallback((code:string, amount:number) => {
+    const key=`altameta:friendReserved:${code}`;
+    if(typeof window==="undefined") return false;
+    if(localStorage.getItem(key)) return true;
+    const stake=eurosToUnits(amount);
+    if(profile.coins<stake) return false;
+    setProfile(prev=>{const next={...prev,coins:prev.coins-stake};storage.write(STORAGE_KEYS.profile,next);return next;});
+    localStorage.setItem(key,"1");
+    return true;
+  },[profile.coins]);
+
+  const settleFriendChallenge = useCallback((ch:FriendChallenge,role:"creator"|"guest") => {
+    if(ch.creator_score==null||ch.guest_score==null||typeof window==="undefined") return;
+    const settledKey=`altameta:friendSettled:${ch.code}`;
+    if(localStorage.getItem(settledKey)) return;
+    const mine=role==="creator"?ch.creator_score:ch.guest_score;
+    const theirs=role==="creator"?ch.guest_score:ch.creator_score;
+    const tie=mine===theirs;
+    const won=!tie&&(ch.score_mode==="low"?mine<theirs:mine>theirs);
+    const stake=eurosToUnits(ch.wager_eur);
+    const payout=tie?stake:(won?settlementAmount(true,ch.wager_eur):0);
+    const delta=tie?0:balanceDelta(won,ch.wager_eur);
+    const opponentName=role==="creator"?(ch.guest_name||"FRIEND"):ch.creator_name;
+    const opponentAvatar=role==="creator"?(ch.guest_avatar||"🎮"):ch.creator_avatar;
+    const outcome:MatchOutcome={id:`friend-${ch.code}-${role}`,gameId:ch.game_id,opponentName,opponentAvatar,opponentRating:profile.rating,playerAvgMs:mine,opponentAvgMs:theirs,playerBestMs:mine,falseStarts:0,won,tied:tie,friendChallengeCode:ch.code,coinDelta:delta,wagerEur:ch.wager_eur,ratingDelta:0,playedAt:new Date().toISOString(),rounds:[]};
+    setProfile(prev=>{const next={...prev,coins:prev.coins+payout,gamesPlayed:prev.gamesPlayed+1,wins:prev.wins+(won?1:0),losses:prev.losses+(!won&&!tie?1:0)};storage.write(STORAGE_KEYS.profile,next);return next;});
+    setHistory(prev=>{const next=[outcome,...prev.filter(x=>x.id!==outcome.id)].slice(0,50);storage.write(STORAGE_KEYS.history,next);return next;});
+    setLastOutcome(outcome);
+    localStorage.setItem(settledKey,"1");
+  },[profile.rating]);
 
   const cancelMatch = useCallback(() => {
     abortRef.current?.abort();
@@ -410,6 +444,8 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       updateProfile,
       findMatch,
       startFriendMatch,
+      reserveFriendWager,
+      settleFriendChallenge,
       cancelMatch,
       finishMatch,
       finishRhythmMatch,
@@ -433,6 +469,8 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       updateProfile,
       findMatch,
       startFriendMatch,
+      reserveFriendWager,
+      settleFriendChallenge,
       cancelMatch,
       finishMatch,
       finishRhythmMatch,
