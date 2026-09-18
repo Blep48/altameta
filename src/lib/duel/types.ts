@@ -10,6 +10,7 @@ export interface PlayerProfile {
   wins: number;
   losses: number;
   bestReactionMs: number | null;
+  highscores?: Record<string, number>;
 }
 
 export interface Opponent {
