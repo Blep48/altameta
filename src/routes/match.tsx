@@ -52,7 +52,11 @@ function Matchmaking() {
                           ? "/play/flappy"
                           : game === "dash"
                             ? "/play/dash"
-                            : "/play/reaction",
+                            : game === "stack"
+                              ? "/play/stack"
+                              : game === "penalty"
+                                ? "/play/penalty"
+                                : "/play/reaction",
             }),
           1600,
         );
