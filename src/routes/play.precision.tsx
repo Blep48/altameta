@@ -193,7 +193,7 @@ function PrecisionGame() {
       </div>
 
       <section className="relative mx-5 mt-3 shrink rounded-3xl border border-border bg-card px-4 py-[clamp(1rem,4vh,2.5rem)]">
-        <OpponentOutBanner opponentName={activeMatch.opponent.username} opponentScore={opponentRun.current.points} playerScore={points} outAfterMs={900 + opponentRun.current.stops * 950} label="points" />
+        <OpponentOutBanner opponentName={activeMatch.opponent.username} opponentScore={opponentRun.current.points} playerScore={points} wagerEur={wagerEur} outAfterMs={900 + opponentRun.current.stops * 950} label="points" />
         <div className="relative h-14 w-full overflow-hidden rounded-2xl bg-muted/30">
           <span
             className="absolute inset-y-0 rounded-xl bg-primary/25"
