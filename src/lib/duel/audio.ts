@@ -2,9 +2,12 @@
 
 let ctx: AudioContext | null = null;
 let muted = false;
+let musicTimer: number | null = null;
+let musicGeneration = 0;
 
 export function setMuted(value: boolean) {
   muted = value;
+  if (value) stopMusic();
 }
 
 export function isMuted() {
@@ -69,22 +72,48 @@ export const sfx = {
 };
 
 
-export type MusicStyle = "reaction" | "direction" | "monkey" | "precision" | "flappy" | "dash";
+export type MusicStyle = "menu" | "matchmaking" | "reaction" | "rhythm" | "direction" | "monkey" | "precision" | "flappy" | "dash" | "stack" | "knife";
 
-/** Starts a tiny original looping synth motif. Returns a stop function. */
+type MusicPattern = { notes: number[]; bass: number[]; beat: number; type: OscillatorType; gain: number };
+
+const patterns: Record<MusicStyle, MusicPattern> = {
+  menu: { notes:[261.63,329.63,392,329.63,293.66,349.23,440,349.23], bass:[130.81,130.81,146.83,146.83], beat:300, type:"triangle", gain:.025 },
+  matchmaking: { notes:[220,0,277.18,0,329.63,0,415.3,440], bass:[110,110,123.47,138.59], beat:190, type:"square", gain:.022 },
+  reaction: { notes:[220,261.63,293.66,329.63,293.66,261.63,246.94,220], bass:[110,110,123.47,110], beat:230, type:"triangle", gain:.03 },
+  rhythm: { notes:[329.63,392,493.88,392,349.23,440,523.25,440], bass:[164.81,196,174.61,220], beat:170, type:"square", gain:.022 },
+  direction: { notes:[220,233.08,277.18,293.66,277.18,233.08,220,329.63], bass:[110,116.54,138.59,146.83], beat:190, type:"triangle", gain:.027 },
+  monkey: { notes:[196,207.65,246.94,261.63,311.13,261.63,246.94,207.65], bass:[98,103.83,123.47,103.83], beat:260, type:"sine", gain:.03 },
+  precision: { notes:[110,116.54,110,130.81,123.47,116.54,103.83,110], bass:[55,55,61.74,51.91], beat:300, type:"sawtooth", gain:.018 },
+  flappy: { notes:[392,523.25,659.25,523.25,440,587.33,698.46,587.33], bass:[196,220,196,293.66], beat:145, type:"square", gain:.021 },
+  dash: { notes:[130.81,196,261.63,196,146.83,220,293.66,220], bass:[65.41,73.42,65.41,73.42], beat:135, type:"square", gain:.024 },
+  stack: { notes:[261.63,329.63,392,523.25,392,329.63,293.66,440], bass:[130.81,146.83,164.81,146.83], beat:210, type:"triangle", gain:.025 },
+  knife: { notes:[146.83,174.61,220,174.61,155.56,185,233.08,185], bass:[73.42,77.78,73.42,92.5], beat:165, type:"sawtooth", gain:.019 },
+};
+
+export function stopMusic() {
+  musicGeneration++;
+  if (musicTimer != null && typeof window !== "undefined") window.clearTimeout(musicTimer);
+  musicTimer = null;
+}
+
+/** Starts an original, asset-free two-voice arcade loop. Only one soundtrack can play at once. */
 export function startMusic(style: MusicStyle): () => void {
-  const patterns: Record<MusicStyle, { notes: number[]; beat: number; type: OscillatorType; gain: number }> = {
-    reaction: { notes: [220, 261.63, 293.66, 329.63, 293.66, 261.63, 246.94, 220], beat: 230, type: "triangle", gain: 0.035 },
-    direction: { notes: [220, 233.08, 277.18, 293.66, 277.18, 233.08, 220, 329.63], beat: 190, type: "triangle", gain: 0.032 },
-    monkey: { notes: [196, 207.65, 246.94, 261.63, 311.13, 261.63, 246.94, 207.65], beat: 260, type: "sine", gain: 0.035 },
-    precision: { notes: [110, 116.54, 110, 130.81, 123.47, 116.54, 103.83, 110], beat: 300, type: "sawtooth", gain: 0.022 },
-    flappy: { notes: [392, 523.25, 659.25, 523.25, 440, 587.33, 698.46, 587.33], beat: 170, type: "square", gain: 0.025 },
-    dash: { notes: [130.81, 196, 261.63, 196, 146.83, 220, 293.66, 220], beat: 135, type: "square", gain: 0.028 },
-  };
+  stopMusic();
+  if (typeof window === "undefined" || muted) return () => {};
+  const generation = musicGeneration;
   const p = patterns[style];
   let i = 0;
-  const play = () => { tone(p.notes[i % p.notes.length]!, Math.min(0.16, p.beat / 1400), p.type, 0, p.gain); i++; };
+  const play = () => {
+    if (generation !== musicGeneration || muted) return;
+    const note = p.notes[i % p.notes.length]!;
+    if (note > 0) tone(note, Math.min(.18,p.beat/1200),p.type,0,p.gain);
+    if (i % 2 === 0) {
+      const bass=p.bass[Math.floor(i/2)%p.bass.length]!;
+      tone(bass,Math.min(.24,p.beat/850),"triangle",0,p.gain*.55);
+    }
+    i++;
+    musicTimer=window.setTimeout(play,p.beat);
+  };
   play();
-  const timer = window.setInterval(play, p.beat);
-  return () => window.clearInterval(timer);
+  return () => { if (generation === musicGeneration) stopMusic(); };
 }
