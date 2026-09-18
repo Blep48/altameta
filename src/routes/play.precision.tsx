@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useDuel } from "@/lib/duel/provider";
 import { sfx } from "@/lib/duel/audio";
+import { MatchBalance } from "@/components/duel/MatchBalance";
 import {
   MAX_STOPS,
   createTarget,
@@ -36,7 +37,7 @@ type Phase = "ready" | "playing" | "over";
 
 function PrecisionGame() {
   const navigate = useNavigate();
-  const { activeMatch, finishPrecisionMatch, ready } = useDuel();
+  const { activeMatch, finishPrecisionMatch, ready, profile, wagerEur } = useDuel();
 
   const [phase, setPhase] = useState<Phase>("ready");
   const [position, setPosition] = useState(0);
@@ -173,7 +174,12 @@ function PrecisionGame() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      <header className="grid grid-cols-3 gap-2 px-5 pt-6 text-center">
+      <div className="px-5 pt-5 text-center">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">How to play</p>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Press STOP while the marker is inside the target. The inner zone scores double. One miss ends the duel.</p>
+      </div>
+      <MatchBalance coins={profile.coins} wagerEur={wagerEur} />
+      <header className="grid grid-cols-3 gap-2 px-5 pt-3 text-center">
         <Meter label="Points" value={`${points}`} />
         <Meter label="Stops" value={`${stops}`} />
         <Meter label="Perfects" value={`${perfects}`} />
