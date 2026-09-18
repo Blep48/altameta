@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { startMusic } from "@/lib/duel/audio";
 import { createFriendChallenge } from "@/lib/duel/friend-challenges";
 import { Screen, TopBar } from "@/components/duel/Screen";
 import { MINIGAMES } from "@/lib/duel/games";
@@ -22,6 +23,7 @@ const RULES: Record<string,string> = {
 };
 
 function GameSelection() {
+ useEffect(() => startMusic("menu"), []);
  const navigate=useNavigate();
  const {profile,wagerEur,setWagerEur,reserveFriendWager}=useDuel();
  const [selected,setSelected]=useState<MinigameMeta|null>(null);
