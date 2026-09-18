@@ -51,8 +51,8 @@ function GamePreview({id}:{id:string}){const b="relative h-12 w-16 overflow-hidd
  if(id==="rhythm")return <span className={b}><span className="absolute inset-y-0 left-1/2 w-px bg-border"/><span className="absolute bottom-2 left-1 right-1 h-px bg-primary"/><span className="absolute left-2 top-2 h-2 w-5 rounded bg-primary"/><span className="absolute right-2 top-6 h-2 w-5 rounded bg-primary"/></span>;
  if(id==="direction")return <span className={b}><span className="absolute inset-0 grid place-items-center text-2xl font-bold text-primary">↓</span></span>;
  if(id==="memory")return <span className={b}><span className="absolute left-1 top-1 grid h-5 w-5 place-items-center rounded bg-secondary text-[9px] font-bold">1</span><span className="absolute right-1 top-3 grid h-5 w-5 place-items-center rounded bg-secondary text-[9px] font-bold">3</span><span className="absolute bottom-1 left-6 grid h-5 w-5 place-items-center rounded bg-primary/30 text-[9px] font-bold">2</span></span>;
- if(id==="flappy")return <span className={b}><span className="absolute left-2 top-5 text-base">🐤</span><span className="absolute right-3 top-0 h-4 w-2 bg-primary"/><span className="absolute right-3 bottom-0 h-4 w-2 bg-primary"/></span>;
- if(id==="dash")return <span className={b}><span className="absolute bottom-1 left-2 text-xl">🦖</span><span className="absolute bottom-1 right-2 text-xl">🌵</span></span>;
+ if(id==="flappy")return <span className={b}><span className="absolute left-2 top-5 inline-block -scale-x-100 text-base">🐤</span><span className="absolute right-3 top-0 h-4 w-2 bg-primary"/><span className="absolute right-3 bottom-0 h-4 w-2 bg-primary"/></span>;
+ if(id==="dash")return <span className={b}><span className="absolute bottom-1 left-2 inline-block -scale-x-100 text-xl">🦖</span><span className="absolute bottom-1 right-2 text-xl">🌵</span></span>;
  if(id==="precision")return <span className={b}><span className="absolute left-2 right-2 top-1/2 h-3 -translate-y-1/2 rounded bg-primary/25"/><span className="absolute left-1/2 top-2 bottom-2 w-px bg-foreground"/></span>;
  return <span className={b}/>;
 }
