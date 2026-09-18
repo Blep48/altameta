@@ -61,6 +61,12 @@ export interface MonkeySummary {
   opponentLevels: number;
 }
 
+export interface SurvivalSummary {
+  seed: number;
+  playerScore: number;
+  opponentScore: number;
+}
+
 export interface MatchOutcome {
   id: string;
   gameId: string;
@@ -86,6 +92,8 @@ export interface MatchOutcome {
   direction?: DirectionSummary;
   /** Present only for Monkey Test duels. */
   monkey?: MonkeySummary;
+  /** Present for seeded endless survival games. */
+  survival?: SurvivalSummary;
 }
 
 export interface ActiveMatch {
