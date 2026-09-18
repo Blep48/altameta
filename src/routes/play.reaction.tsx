@@ -1,3 +1,4 @@
+import { submitIfFriend } from "@/lib/duel/friend-match";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDuel } from "@/lib/duel/provider";
@@ -88,6 +89,7 @@ function ReactionGame() {
 
       later(() => {
         if (next.length >= TOTAL_ROUNDS) {
+          if(activeMatch.friend){const score=Math.round(next.reduce((a,r)=>a+r.playerMs,0)/next.length);void submitIfFriend(activeMatch,score).then(()=>navigate({to:"/challenge/$code",params:{code:activeMatch.friend!.code}}));return;}
           const outcome = finishMatch(next);
           if (outcome) {
             outcome.won ? sfx.win() : sfx.lose();
