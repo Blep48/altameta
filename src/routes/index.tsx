@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { startMusic } from "@/lib/duel/audio";
 import { Screen, StatTile } from "@/components/duel/Screen";
 import { useDuel } from "@/lib/duel/provider";
 import { formatEuro } from "@/lib/duel/economy";
@@ -24,6 +26,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
+  useEffect(() => startMusic("menu"), []);
   const { profile, history, muted, toggleMuted, canPlay } = useDuel();
 
   return (
