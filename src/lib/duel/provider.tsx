@@ -15,6 +15,7 @@ import { localMatchmaking } from "./matchmaking";
 import { scoreRounds } from "./engine/reaction";
 import { scoreRhythm } from "./engine/rhythm";
 import { scorePrecision, type PrecisionRun } from "./engine/precision";
+import { scoreDirection } from "./engine/direction";
 import { setMuted as setAudioMuted } from "./audio";
 import type { ActiveMatch, MatchOutcome, PlayerProfile, RoundResult } from "./types";
 
@@ -40,6 +41,7 @@ interface DuelContextValue {
     player: PrecisionRun;
     opponent: PrecisionRun;
   }) => MatchOutcome | null;
+  finishDirectionMatch: (args: { playerArrows: number; opponentArrows: number }) => MatchOutcome | null;
   resetProgress: () => void;
   wagerEur: number;
   setWagerEur: (value: number) => void;
@@ -280,6 +282,45 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     [activeMatch, wagerEur],
   );
 
+  const finishDirectionMatch: DuelContextValue["finishDirectionMatch"] = useCallback(
+    ({ playerArrows, opponentArrows }) => {
+      if (!activeMatch) return null;
+      const score = scoreDirection(playerArrows, opponentArrows);
+      const outcome: MatchOutcome = {
+        id: activeMatch.id,
+        gameId: activeMatch.gameId,
+        opponentName: activeMatch.opponent.username,
+        opponentAvatar: activeMatch.opponent.avatar,
+        opponentRating: activeMatch.opponent.rating,
+        playerAvgMs: score.playerArrows,
+        opponentAvgMs: score.opponentArrows,
+        playerBestMs: score.playerArrows,
+        falseStarts: 0,
+        won: score.won,
+        coinDelta: balanceDelta(score.won, wagerEur),
+        wagerEur,
+        ratingDelta: ratingDeltaFor(score.won),
+        playedAt: new Date().toISOString(),
+        rounds: [],
+        direction: { seed: activeMatch.seed, playerArrows: score.playerArrows, opponentArrows: score.opponentArrows },
+      };
+      setProfile((prev) => {
+        const next = applyMatchToProfile(prev, { won: outcome.won, ratingDelta: outcome.ratingDelta, settlement: settlementAmount(outcome.won, wagerEur), bestRoundMs: null });
+        storage.write(STORAGE_KEYS.profile, next);
+        return next;
+      });
+      setHistory((prev) => {
+        const next = [outcome, ...prev].slice(0, 50);
+        storage.write(STORAGE_KEYS.history, next);
+        return next;
+      });
+      setLastOutcome(outcome);
+      setActiveMatch(null);
+      return outcome;
+    },
+    [activeMatch, wagerEur],
+  );
+
   const resetProgress = useCallback(() => {
     const fresh = createDefaultProfile();
     persistProfile(fresh);
@@ -304,6 +345,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       finishMatch,
       finishRhythmMatch,
       finishPrecisionMatch,
+      finishDirectionMatch,
       resetProgress,
       wagerEur,
       setWagerEur,
@@ -323,6 +365,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       finishMatch,
       finishRhythmMatch,
       finishPrecisionMatch,
+      finishDirectionMatch,
       resetProgress,
       wagerEur,
     ],

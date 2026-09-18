@@ -44,7 +44,9 @@ function Matchmaking() {
                   ? "/play/rhythm"
                   : game === "precision"
                     ? "/play/precision"
-                    : "/play/reaction",
+                    : game === "direction"
+                      ? "/play/direction"
+                      : "/play/reaction",
             }),
           1600,
         );

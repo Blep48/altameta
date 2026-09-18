@@ -15,7 +15,7 @@ export const MINIGAMES: MinigameMeta[] = [
     icon: "🎵",
     available: true,
   },
-  { id: "direction", name: "DIRECTION", tagline: "Swipe the arrow before it flips.", icon: "🧭", available: false },
+  { id: "direction", name: "DIRECTION", tagline: "Swipe the falling arrows in order. One mistake and you’re out.", icon: "🧭", available: true },
   { id: "memory", name: "MEMORY", tagline: "Repeat the sequence, faster each time.", icon: "🧠", available: false },
   {
     id: "precision",

@@ -49,6 +49,12 @@ export interface PrecisionSummary {
   perfects: number;
 }
 
+export interface DirectionSummary {
+  seed: number;
+  playerArrows: number;
+  opponentArrows: number;
+}
+
 export interface MatchOutcome {
   id: string;
   gameId: string;
@@ -70,6 +76,8 @@ export interface MatchOutcome {
   rhythm?: RhythmSummary;
   /** Present only for precision duels. */
   precision?: PrecisionSummary;
+  /** Present only for direction duels. */
+  direction?: DirectionSummary;
 }
 
 export interface ActiveMatch {
