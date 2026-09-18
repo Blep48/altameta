@@ -16,6 +16,8 @@ const RULES: Record<string,string> = {
  precision: "Press STOP while the moving marker is inside the target. The inner zone scores double. One miss ends the duel.",
  flappy: "Tap anywhere to flap upward and pass through the gaps. Touching a pipe, ceiling or floor ends the run. Every match generates a new course from its seed.",
  dash: "Run automatically through a seeded obstacle course. Use JUMP to clear obstacles and FAST FALL to slam back to the ground quickly. The speed increases as your score rises.",
+ stack: "Tap to drop each moving block. Only the overlapping part survives. Miss completely and your run ends.",
+ penalty: "Choose left, center or right to shoot. Score more penalties than your opponent after five kicks; ties go to sudden death.",
 };
 
 function GameSelection() {
@@ -53,6 +55,8 @@ function GamePreview({id}:{id:string}){const b="relative h-12 w-16 overflow-hidd
  if(id==="memory")return <span className={b}><span className="absolute left-1 top-1 grid h-5 w-5 place-items-center rounded bg-secondary text-[9px] font-bold">1</span><span className="absolute right-1 top-3 grid h-5 w-5 place-items-center rounded bg-secondary text-[9px] font-bold">3</span><span className="absolute bottom-1 left-6 grid h-5 w-5 place-items-center rounded bg-primary/30 text-[9px] font-bold">2</span></span>;
  if(id==="flappy")return <span className={b}><span className="absolute left-2 top-5 inline-block -scale-x-100 text-base">🐤</span><span className="absolute right-3 top-0 h-4 w-2 bg-primary"/><span className="absolute right-3 bottom-0 h-4 w-2 bg-primary"/></span>;
  if(id==="dash")return <span className={b}><span className="absolute bottom-1 left-2 inline-block -scale-x-100 text-xl">🦖</span><span className="absolute bottom-1 right-2 text-xl">🌵</span></span>;
+ if(id==="stack")return <span className={b}><span className="absolute bottom-1 left-3 h-2 w-10 bg-primary/40"/><span className="absolute bottom-4 left-4 h-2 w-8 bg-primary/60"/><span className="absolute bottom-7 left-2 h-2 w-9 bg-primary"/></span>;
+ if(id==="penalty")return <span className={b}><span className="absolute inset-2 border-2 border-foreground/60"/><span className="absolute bottom-1 left-1/2 -translate-x-1/2 text-lg">⚽</span></span>;
  if(id==="precision")return <span className={b}><span className="absolute left-2 right-2 top-1/2 h-3 -translate-y-1/2 rounded bg-primary/25"/><span className="absolute left-1/2 top-2 bottom-2 w-px bg-foreground"/></span>;
  return <span className={b}/>;
 }
