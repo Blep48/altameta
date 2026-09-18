@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDuel } from "@/lib/duel/provider";
+import { OpponentOutBanner } from "@/components/duel/OpponentOutBanner";
 import { MatchBalance } from "@/components/duel/MatchBalance";
 import { sfx, startMusic } from "@/lib/duel/audio";
 import { createMonkeyBoard, simulateMonkeyOpponent } from "@/lib/duel/engine/monkey";
@@ -63,6 +64,7 @@ function MonkeyTest() {
     </header>
     <div className="px-5 pt-2 text-center text-xs text-muted-foreground">Memorize the numbers. After 1 second they flash in order, then disappear. Tap every square from 1 upward.</div>
     <section className="relative mx-4 mb-4 mt-3 min-h-0 flex-1 overflow-hidden rounded-3xl border border-border bg-card">
+      <OpponentOutBanner opponentName={activeMatch.opponent.username} opponentScore={opponentLevels} playerScore={level} outAfterMs={Math.max(1800, opponentLevels * 2600)} label="levels" />
       {board.map(tile => <button key={tile.number} type="button" onPointerDown={()=>press(tile.number)}
         className={`absolute grid h-12 w-12 place-items-center rounded-lg border font-display text-xl font-black text-foreground transition-all duration-100 active:scale-90 ${highlighted === tile.number ? "scale-110 border-primary bg-primary text-primary-foreground shadow-[0_0_24px_hsl(var(--primary))]" : "border-primary/50 bg-secondary"}`}
         style={{left:`${tile.x}%`,top:`${tile.y}%`}}>
