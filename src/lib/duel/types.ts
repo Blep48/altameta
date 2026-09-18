@@ -55,6 +55,12 @@ export interface DirectionSummary {
   opponentArrows: number;
 }
 
+export interface MonkeySummary {
+  seed: number;
+  playerLevels: number;
+  opponentLevels: number;
+}
+
 export interface MatchOutcome {
   id: string;
   gameId: string;
@@ -78,6 +84,8 @@ export interface MatchOutcome {
   precision?: PrecisionSummary;
   /** Present only for direction duels. */
   direction?: DirectionSummary;
+  /** Present only for Monkey Test duels. */
+  monkey?: MonkeySummary;
 }
 
 export interface ActiveMatch {

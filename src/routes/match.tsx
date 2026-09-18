@@ -46,7 +46,9 @@ function Matchmaking() {
                     ? "/play/precision"
                     : game === "direction"
                       ? "/play/direction"
-                      : "/play/reaction",
+                      : game === "memory"
+                        ? "/play/memory"
+                        : "/play/reaction",
             }),
           1600,
         );
