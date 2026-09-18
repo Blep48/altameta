@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { createFriendChallenge } from "@/lib/duel/friend-challenges";
 import { Screen, TopBar } from "@/components/duel/Screen";
 import { MINIGAMES } from "@/lib/duel/games";
 import { useDuel } from "@/lib/duel/provider";
@@ -24,6 +25,7 @@ function GameSelection() {
  const navigate=useNavigate();
  const {profile,wagerEur,setWagerEur}=useDuel();
  const [selected,setSelected]=useState<MinigameMeta|null>(null);
+ const [creating,setCreating]=useState(false); const [share,setShare]=useState<{url:string;code:string}|null>(null);
  const affordable=profile.coins>=wagerEur*100;
  if(selected) return <Screen><TopBar title={selected.name} back="/games"/>
    <div className="mt-4 flex items-center gap-4 rounded-3xl border border-border bg-card p-5">
@@ -38,7 +40,9 @@ function GameSelection() {
     <div className="flex items-center justify-between"><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Choose stake</p><p className="text-xs text-muted-foreground">Balance <span className="font-bold text-primary">{formatEuro(profile.coins)}</span></p></div>
     <div className="mt-3 grid grid-cols-4 gap-2">{WAGER_OPTIONS_EUR.map(a=><button key={a} type="button" disabled={profile.coins<a*100} onClick={()=>setWagerEur(a)} className={`rounded-xl border px-2 py-3 font-display text-sm font-bold disabled:opacity-30 ${wagerEur===a?"border-primary bg-primary/15 text-primary":"border-border bg-background"}`}>€{a}</button>)}</div>
    </section>
-   <button type="button" disabled={!affordable} onClick={()=>navigate({to:"/match",search:{game:selected.id}})} className="mt-5 w-full rounded-3xl bg-primary py-6 font-display text-xl font-bold tracking-[0.25em] text-primary-foreground disabled:opacity-30">FIND OPPONENT · €{wagerEur}</button>
+   <button type="button" disabled={!affordable} onClick={()=>navigate({to:"/match",search:{game:selected.id}})} className="mt-5 w-full rounded-3xl bg-primary py-5 font-display text-lg font-bold tracking-[0.2em] text-primary-foreground disabled:opacity-30">FIND OPPONENT · €{wagerEur}</button>
+   <button type="button" disabled={!affordable||creating} onClick={async()=>{setCreating(true);try{const ch=await createFriendChallenge({gameId:selected.id,wagerEur,name:profile.username,avatar:profile.avatar});const url=`${window.location.origin}/challenge/${ch.code}`;sessionStorage.setItem("altameta:friendChallenge",JSON.stringify({code:ch.code,role:"creator",seed:ch.seed}));setShare({url,code:ch.code})}finally{setCreating(false)}} className="mt-3 w-full rounded-3xl border border-primary/50 bg-card py-4 font-display text-sm font-bold tracking-[0.18em] text-primary disabled:opacity-30">{creating?"CREATING…":"CHALLENGE A FRIEND · 24H"}</button>
+   {share&&<div className="mt-3 rounded-2xl border border-border bg-card p-4 text-center"><p className="text-[10px] uppercase tracking-[.2em] text-muted-foreground">Challenge code · valid for 24 hours</p><p className="mt-1 font-display text-2xl font-black tracking-[.2em] text-primary">{share.code}</p><button onClick={async()=>{if(navigator.share)await navigator.share({title:"ALTAMETA challenge",text:`Beat me at ${selected.name}!`,url:share.url});else await navigator.clipboard.writeText(share.url)}} className="mt-3 rounded-xl bg-primary px-5 py-3 text-xs font-bold text-primary-foreground">SHARE INVITE</button><p className="mt-2 break-all text-[10px] text-muted-foreground">{share.url}</p></div>}
  </Screen>;
  return <Screen><TopBar title="SELECT GAME" back="/"/><p className="text-center text-xs uppercase tracking-[0.2em] text-muted-foreground">Balance {formatEuro(profile.coins)}</p>
   <ul className="mt-6 space-y-3">{MINIGAMES.map((g,i)=><li key={g.id} className="animate-rise" style={{animationDelay:`${i*50}ms`}}><button type="button" disabled={!g.available} onClick={()=>setSelected(g)} className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-border bg-card px-3 py-4 text-left active:scale-[0.98] disabled:opacity-45">
