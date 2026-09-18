@@ -131,19 +131,19 @@ function ReactionGame() {
           : "bg-background text-foreground";
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      <div className="px-5 pt-5 text-center">
+    <main className="mx-auto flex h-[100dvh] w-full max-w-md flex-col overflow-hidden overscroll-none bg-background">
+      <div className="shrink-0 px-5 pt-3 text-center">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">How to play</p>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">5 rounds. Wait for the arena to turn green, then tap as fast as possible. Tapping early gives you a penalty.</p>
       </div>
       <MatchBalance coins={profile.coins} wagerEur={wagerEur} />
-      <header className="grid grid-cols-3 gap-2 px-5 pt-3 text-center">
+      <header className="grid shrink-0 grid-cols-3 gap-2 px-5 pt-2 text-center">
         <Meter label="Round" value={`${Math.min(round, TOTAL_ROUNDS)}/${TOTAL_ROUNDS}`} />
         <Meter label="Average" value={avg ? `${avg}` : "—"} />
         <Meter label="Best" value={best ? `${best}` : "—"} />
       </header>
 
-      <div className="flex items-center justify-between px-5 pt-3 text-xs text-muted-foreground">
+      <div className="flex shrink-0 items-center justify-between px-5 pt-2 text-xs text-muted-foreground">
         <span className="truncate">vs {activeMatch.opponent.username}</span>
         <span className="tabular-nums">last {lastMs != null ? `${lastMs} ms` : "—"}</span>
       </div>
