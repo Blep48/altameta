@@ -19,6 +19,7 @@ export const Route = createFileRoute("/result")({
 function Result() {
   const { lastOutcome, profile, ready, canPlay } = useDuel();
   const navigate = useNavigate();
+  const [animatedWin, setAnimatedWin] = useState(0);
 
   useEffect(() => {
     if (ready && !lastOutcome) navigate({ to: "/" });
@@ -31,10 +32,9 @@ function Result() {
   const direction = lastOutcome.direction;
   const monkey = lastOutcome.monkey;
   const survival = lastOutcome.survival;
-  const [animatedWin, setAnimatedWin] = useState(0);
 
   useEffect(() => {
-    if (!won) { setAnimatedWin(0); return; }
+    if (!lastOutcome?.won) { setAnimatedWin(0); return; }
     const target = Math.max(0, lastOutcome.coinDelta);
     const started = performance.now();
     let frame = 0;
