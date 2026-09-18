@@ -178,7 +178,7 @@ function RhythmGame() {
           flash === "miss" ? "animate-shake border-destructive" : "border-border"
         }`}
       >
-        <OpponentOutBanner opponentName={activeMatch.opponent.username} opponentScore={opponentOut} playerScore={hits} outAfterMs={1200 + opponentOutMs} label="notes" />
+        <OpponentOutBanner opponentName={activeMatch.opponent.username} opponentScore={opponentOut} playerScore={hits} wagerEur={wagerEur} outAfterMs={1200 + opponentOutMs} label="notes" />
         <div className="absolute inset-y-0 left-1/2 w-px bg-border" />
         <div
           className="absolute inset-x-0 h-1 bg-primary/70"
