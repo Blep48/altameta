@@ -30,6 +30,7 @@ export function createDefaultProfile(): PlayerProfile {
     wins: 0,
     losses: 0,
     bestReactionMs: null,
+    highscores: {},
   };
 }
 
@@ -61,5 +62,6 @@ export function applyMatchToProfile(
     wins: profile.wins + (args.won ? 1 : 0),
     losses: profile.losses + (args.won ? 0 : 1),
     bestReactionMs: best,
+    highscores: profile.highscores ?? {},
   };
 }
