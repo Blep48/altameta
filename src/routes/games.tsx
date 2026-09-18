@@ -68,8 +68,9 @@ function GameSelection() {
               onClick={() => navigate({ to: "/match", search: { game: g.id } })}
               className="grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 rounded-2xl border border-border bg-card px-4 py-5 text-left transition-transform duration-150 active:scale-[0.98] disabled:opacity-45"
             >
-              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-secondary text-2xl">
-                {g.icon}
+              <span className="flex shrink-0 items-center gap-2">
+                <span className="grid h-12 w-12 place-items-center rounded-xl bg-secondary text-2xl">{g.icon}</span>
+                <GamePreview id={g.id} />
               </span>
               <span className="min-w-0">
                 <span className="block font-display text-lg font-bold tracking-[0.18em]">
@@ -92,4 +93,13 @@ function GameSelection() {
       </ul>
     </Screen>
   );
+}
+
+function GamePreview({ id }: { id: string }) {
+  const base = "relative h-12 w-16 overflow-hidden rounded-xl border border-border bg-background";
+  if (id === "reaction") return <span className={base}><span className="absolute inset-2 rounded-lg bg-primary/70" /><span className="absolute inset-0 grid place-items-center text-[8px] font-black tracking-wider text-primary-foreground">TAP</span></span>;
+  if (id === "rhythm") return <span className={base}><span className="absolute inset-y-0 left-1/2 w-px bg-border" /><span className="absolute bottom-2 left-1 right-1 h-px bg-primary" /><span className="absolute left-2 top-2 h-2 w-5 rounded bg-primary" /><span className="absolute right-2 top-6 h-2 w-5 rounded bg-primary" /></span>;
+  if (id === "direction") return <span className={base}><span className="absolute left-1/2 top-1 -translate-x-1/2 text-lg font-bold text-primary">↓</span><span className="absolute bottom-2 left-1 right-1 border-t border-dashed border-destructive" /></span>;
+  if (id === "precision") return <span className={base}><span className="absolute left-2 right-2 top-1/2 h-3 -translate-y-1/2 rounded bg-primary/25" /><span className="absolute left-[42%] top-1/2 h-3 w-3 -translate-y-1/2 rounded bg-accent/70" /><span className="absolute left-[54%] top-2 bottom-2 w-px bg-foreground" /></span>;
+  return <span className={base}><span className="absolute inset-0 grid place-items-center text-[9px] uppercase tracking-wider text-muted-foreground">Soon</span></span>;
 }

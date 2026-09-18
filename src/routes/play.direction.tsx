@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDuel } from "@/lib/duel/provider";
 import { sfx } from "@/lib/duel/audio";
+import { MatchBalance } from "@/components/duel/MatchBalance";
 import {
   createDirectionChart,
   simulateDirectionOpponent,
@@ -22,7 +23,7 @@ const SYMBOL: Record<Direction, string> = { up: "↑", right: "→", down: "↓"
 
 function DirectionGame() {
   const navigate = useNavigate();
-  const { activeMatch, finishDirectionMatch, ready } = useDuel();
+  const { activeMatch, finishDirectionMatch, ready, profile, wagerEur } = useDuel();
   const [phase, setPhase] = useState<Phase>("ready");
   const [elapsed, setElapsed] = useState(0);
   const [destroyed, setDestroyed] = useState(0);
@@ -112,7 +113,12 @@ function DirectionGame() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      <header className="grid grid-cols-3 gap-2 px-5 pt-6 text-center">
+      <div className="px-5 pt-5 text-center">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">How to play</p>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Swipe in the direction shown by the lowest falling arrow. A wrong swipe or an arrow crossing the danger line ends the run.</p>
+      </div>
+      <MatchBalance coins={profile.coins} wagerEur={wagerEur} />
+      <header className="grid grid-cols-3 gap-2 px-5 pt-3 text-center">
         <Meter label="Destroyed" value={String(destroyed)} />
         <Meter label="Level" value={String(level)} />
         <Meter label="Opponent" value={destroyed >= opponentOut ? `OUT ${opponentOut}` : String(Math.min(destroyed, opponentOut))} />
