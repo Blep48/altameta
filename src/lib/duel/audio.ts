@@ -44,6 +44,12 @@ export const sfx = {
     tone(150, 0.25, "sawtooth", 0, 0.16);
     tone(110, 0.3, "sawtooth", 0.08, 0.14);
   },
+  secured: () => {
+    tone(659, 0.10, "triangle", 0, 0.10);
+    tone(784, 0.12, "triangle", 0.08, 0.11);
+    tone(1046.5, 0.22, "sine", 0.17, 0.13);
+    tone(1318.5, 0.30, "sine", 0.27, 0.09);
+  },
   win: () => {
     tone(523, 0.14, "triangle", 0);
     tone(659, 0.14, "triangle", 0.12);
