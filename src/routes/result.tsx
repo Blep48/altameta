@@ -33,6 +33,8 @@ function Result() {
   const direction = lastOutcome.direction;
   const monkey = lastOutcome.monkey;
   const survival = lastOutcome.survival;
+  const ladderMatch = lastOutcome.ladderStreak != null;
+  const ladderShownPrize = lastOutcome.ladderPrizeUnits ?? 0;
 
   useEffect(() => {
     if (!lastOutcome?.won) { setAnimatedWin(0); return; }
@@ -69,9 +71,9 @@ function Result() {
       </div>
 
       <div className="mt-5 text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{ladder && lastOutcome.gameId===ladder.gameId ? (won ? "Run value · DEMO" : "Run lost") : won ? "Winnings" : "Lost"}</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{ladderMatch ? (won ? `Ladder cash out · ${lastOutcome.ladderStreak} win${lastOutcome.ladderStreak===1?"":"s"}` : "Ladder run lost") : won ? "Winnings" : "Lost"}</p>
         <p className={`mt-1 font-display text-5xl font-black tabular-nums ${won ? "text-primary text-glow" : "text-destructive"}`}>
-          {ladder && lastOutcome.gameId===ladder.gameId ? (won && ladder.active ? formatEuro(ladderPrizeUnits(ladder)) : formatEuro(-ladder.wagerEur*100, true)) : won ? formatEuro(animatedWin, true) : formatEuro(lastOutcome.coinDelta, true)}
+          {ladderMatch ? (won ? formatEuro(ladderShownPrize) : formatEuro(-lastOutcome.wagerEur*100, true)) : won ? formatEuro(animatedWin, true) : formatEuro(lastOutcome.coinDelta, true)}
         </p>
       </div>
 
@@ -124,7 +126,7 @@ function Result() {
       <section className="mt-6 grid grid-cols-2 gap-3">
         <Delta
           label={`Stake €${lastOutcome.wagerEur}`}
-          value={formatEuro(lastOutcome.coinDelta, true)}
+          value={ladderMatch && won ? formatEuro(ladderShownPrize) : formatEuro(lastOutcome.coinDelta, true)}
           positive={won}
         />
         <Delta
