@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDuel } from "@/lib/duel/provider";
 import { sfx } from "@/lib/duel/audio";
+import { OpponentOutBanner } from "@/components/duel/OpponentOutBanner";
 import { MatchBalance } from "@/components/duel/MatchBalance";
 import {
   MAX_NOTES,
@@ -142,6 +143,7 @@ function RhythmGame() {
   if (!activeMatch) return null;
 
   const level = notes[Math.min(nextIndex.current, notes.length - 1)]!.level;
+  const opponentOutMs = opponentOut < notes.length ? notes[opponentOut]!.timeMs + notes[opponentOut]!.windowMs : notes[notes.length - 1]!.timeMs;
   const opponentAlive = hits < opponentOut && !(phase === "over" && hits >= opponentOut);
   const opponentNoteCount = Math.min(hits, opponentOut);
 
@@ -176,6 +178,7 @@ function RhythmGame() {
           flash === "miss" ? "animate-shake border-destructive" : "border-border"
         }`}
       >
+        <OpponentOutBanner opponentName={activeMatch.opponent.username} opponentScore={opponentOut} playerScore={hits} outAfterMs={1200 + opponentOutMs} label="notes" />
         <div className="absolute inset-y-0 left-1/2 w-px bg-border" />
         <div
           className="absolute inset-x-0 h-1 bg-primary/70"
