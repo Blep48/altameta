@@ -34,13 +34,13 @@ function Knife(){
       ctx.save();ctx.translate(cx,cy);ctx.fillStyle="#25232d";ctx.strokeStyle="#8b5cf6";ctx.lineWidth=9;ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.fill();ctx.stroke();
       ctx.rotate(angle.current*Math.PI/180);ctx.strokeStyle="#eee";ctx.lineWidth=4;ctx.lineCap="round";
       for(const a of knives.current){ctx.save();ctx.rotate(a*Math.PI/180);ctx.beginPath();ctx.moveTo(0,-r+4);ctx.lineTo(0,-r-62);ctx.stroke();ctx.restore()}ctx.restore();
-      if(projectile.current!==null){const start=h-48,end=cy+r+58,yy=start+(end-start)*projectile.current;ctx.strokeStyle="#eee";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(cx,yy);ctx.lineTo(cx,yy-58);ctx.stroke()}
+      if(projectile.current!==null){const start=h-38,end=cy+r+58,yy=start+(end-start)*projectile.current;ctx.strokeStyle="#eee";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(cx,yy);ctx.lineTo(cx,yy+58);ctx.stroke()}
       raf.current=requestAnimationFrame(tick)};
     raf.current=requestAnimationFrame(tick);return()=>{ro.disconnect();if(raf.current)cancelAnimationFrame(raf.current)}
   },[activeMatch]);
 
   if(!activeMatch)return null;
-  const throwKnife=()=>{if(done.current||projectile.current!==null)return;projectile.current=0;queuedHit.current=(360-angle.current)%360;};
+  const throwKnife=()=>{if(done.current||projectile.current!==null)return;projectile.current=0;queuedHit.current=(180-angle.current+360)%360;};
 
   return <main className="mx-auto flex h-[100dvh] w-full max-w-md touch-none select-none flex-col overflow-hidden bg-background">
     <MatchBalance coins={profile.coins} wagerEur={wagerEur}/><div className="flex justify-between px-5 py-2 text-xs"><b>KNIFE IT · {score}</b><span>vs {activeMatch.opponent.username}</span></div>
