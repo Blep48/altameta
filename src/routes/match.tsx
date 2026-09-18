@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Screen } from "@/components/duel/Screen";
 import { useDuel } from "@/lib/duel/provider";
-import { sfx } from "@/lib/duel/audio";
+import { sfx, startMusic } from "@/lib/duel/audio";
 import type { ActiveMatch } from "@/lib/duel/types";
 import { getFriendChallenge, getFriendSession } from "@/lib/duel/friend-challenges";
 
@@ -23,6 +23,7 @@ export const Route = createFileRoute("/match")({
 });
 
 function Matchmaking() {
+  useEffect(() => startMusic("matchmaking"), []);
   const { game, friend: friendMode } = Route.useSearch();
   const navigate = useNavigate();
   const { profile, findMatch, startFriendMatch, cancelMatch } = useDuel();
