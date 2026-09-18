@@ -20,6 +20,7 @@ import { scoreMonkey } from "./engine/monkey";
 import { setMuted as setAudioMuted } from "./audio";
 import type { ActiveMatch, MatchOutcome, PlayerProfile, RoundResult } from "./types";
 import type { FriendChallenge } from "./friend-challenges";
+import { ladderPrizeUnits, readLadder, writeLadder, type LadderRun } from "./ladder";
 
 interface DuelContextValue {
   ready: boolean;
@@ -53,6 +54,10 @@ interface DuelContextValue {
   wagerEur: number;
   setWagerEur: (value: number) => void;
   canPlay: boolean;
+  ladder: LadderRun | null;
+  startLadder: (gameId:string) => Promise<ActiveMatch>;
+  continueLadder: () => Promise<ActiveMatch>;
+  cashOutLadder: () => void;
 }
 
 const DuelContext = createContext<DuelContextValue | null>(null);
@@ -66,6 +71,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
   const [muted, setMutedState] = useState(false);
   const [wagerEur, setWagerEur] = useState(DEFAULT_WAGER_EUR);
   const abortRef = useRef<AbortController | null>(null);
+  const [ladder,setLadder] = useState<LadderRun|null>(null);
 
   useEffect(() => {
     const stored = storage.read<PlayerProfile>(STORAGE_KEYS.profile);
@@ -111,6 +117,10 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       return next;
     });
   }, []);
+
+  const ladderRef=useRef<LadderRun|null>(null);
+  useEffect(()=>{ladderRef.current=ladder},[ladder]);
+  const settlementForMode=useCallback((won:boolean,amount:number)=>ladderRef.current?.active?0:settlementAmount(won,amount),[]);
 
   const findMatch = useCallback(
     async (gameId: string) => {
@@ -167,6 +177,15 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(settledKey,"1");
   },[profile.rating]);
 
+  const startLadder=useCallback(async(gameId:string)=>{const run:LadderRun={gameId,wagerEur,streak:0,active:true};writeLadder(run);setLadder(run);ladderRef.current=run;return findMatch(gameId)},[wagerEur,findMatch]);
+  const continueLadder=useCallback(async()=>{const run=ladderRef.current;if(!run?.active)throw new Error("No active ladder");return findMatch(run.gameId)},[findMatch]);
+  const cashOutLadder=useCallback(()=>{const run=ladderRef.current;if(!run?.active||run.streak<1)return;const prize=ladderPrizeUnits(run);setProfile(prev=>{const next={...prev,coins:prev.coins+prize};storage.write(STORAGE_KEYS.profile,next);return next});writeLadder(null);setLadder(null);ladderRef.current=null},[]);
+
+  useEffect(()=>{if(!lastOutcome)return;const run=ladderRef.current;if(!run?.active||lastOutcome.gameId!==run.gameId)return;
+    if(lastOutcome.won){const next={...run,streak:run.streak+1};writeLadder(next);setLadder(next);ladderRef.current=next}
+    else{const ended={...run,active:false,lost:true};writeLadder(ended);setLadder(ended);ladderRef.current=ended}
+  },[lastOutcome]);
+
   const cancelMatch = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
@@ -209,7 +228,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
         const next = applyMatchToProfile(prev, {
           won: outcome.won,
           ratingDelta: outcome.ratingDelta,
-          settlement: settlementAmount(outcome.won, wagerEur),
+          settlement: settlementForMode(outcome.won, wagerEur),
           bestRoundMs: score.cleanBestMs,
         });
         storage.write(STORAGE_KEYS.profile, next);
@@ -262,7 +281,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
         const next = applyMatchToProfile(prev, {
           won: outcome.won,
           ratingDelta: outcome.ratingDelta,
-          settlement: settlementAmount(outcome.won, wagerEur),
+          settlement: settlementForMode(outcome.won, wagerEur),
           bestRoundMs: null,
         });
         storage.write(STORAGE_KEYS.profile, next);
@@ -317,7 +336,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
         const next = applyMatchToProfile(prev, {
           won: outcome.won,
           ratingDelta: outcome.ratingDelta,
-          settlement: settlementAmount(outcome.won, wagerEur),
+          settlement: settlementForMode(outcome.won, wagerEur),
           bestRoundMs: null,
         });
         storage.write(STORAGE_KEYS.profile, next);
@@ -361,7 +380,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
         direction: { seed: activeMatch.seed, playerArrows: score.playerArrows, opponentArrows: score.opponentArrows },
       };
       setProfile((prev) => {
-        const next = applyMatchToProfile(prev, { won: outcome.won, ratingDelta: outcome.ratingDelta, settlement: settlementAmount(outcome.won, wagerEur), bestRoundMs: null });
+        const next = applyMatchToProfile(prev, { won: outcome.won, ratingDelta: outcome.ratingDelta, settlement: settlementForMode(outcome.won, wagerEur), bestRoundMs: null });
         storage.write(STORAGE_KEYS.profile, next);
         return next;
       });
@@ -392,7 +411,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
         monkey: { seed: activeMatch.seed, playerLevels: score.playerLevels, opponentLevels: score.opponentLevels },
       };
       setProfile(prev => {
-        const next = applyMatchToProfile(prev,{won:outcome.won,ratingDelta:outcome.ratingDelta,settlement:settlementAmount(outcome.won,wagerEur),bestRoundMs:null});
+        const next = applyMatchToProfile(prev,{won:outcome.won,ratingDelta:outcome.ratingDelta,settlement:settlementForMode(outcome.won,wagerEur),bestRoundMs:null});
         storage.write(STORAGE_KEYS.profile,next); return next;
       });
       setHistory(prev => { const next=[outcome,...prev].slice(0,50);storage.write(STORAGE_KEYS.history,next);return next;});
