@@ -36,6 +36,7 @@ function ReactionGame() {
   const [round, setRound] = useState(1);
   const [rounds, setRounds] = useState<RoundResult[]>([]);
   const [lastMs, setLastMs] = useState<number | null>(null);
+  const finishing = useRef(false);
   const goAt = useRef(0);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -44,7 +45,7 @@ function ReactionGame() {
   }, []);
 
   useEffect(() => {
-    if (ready && !activeMatch) navigate({ to: "/" });
+    if (ready && !activeMatch && !finishing.current) navigate({ to: "/" });
   }, [ready, activeMatch, navigate]);
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
@@ -90,6 +91,7 @@ function ReactionGame() {
       later(() => {
         if (next.length >= TOTAL_ROUNDS) {
           if(activeMatch.friend){const score=Math.round(next.reduce((a,r)=>a+r.playerMs,0)/next.length);void submitIfFriend(activeMatch,score).then(()=>navigate({to:"/challenge/$code",params:{code:activeMatch.friend!.code}}));return;}
+          finishing.current = true;
           const outcome = finishMatch(next);
           if (outcome) {
             outcome.won ? sfx.win() : sfx.lose();
