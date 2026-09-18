@@ -30,6 +30,7 @@ function Result() {
   const precision = lastOutcome.precision;
   const direction = lastOutcome.direction;
   const monkey = lastOutcome.monkey;
+  const survival = lastOutcome.survival;
 
   return (
     <Screen>
@@ -55,7 +56,9 @@ function Result() {
           avatar={profile.avatar}
           name="YOU"
           value={
-            monkey
+            survival
+              ? `${survival.playerScore}`
+              : monkey
               ? `${monkey.playerLevels}`
               : direction
                 ? `${direction.playerArrows}`
@@ -72,7 +75,9 @@ function Result() {
           avatar={lastOutcome.opponentAvatar}
           name={lastOutcome.opponentName}
           value={
-            monkey
+            survival
+              ? `${survival.opponentScore}`
+              : monkey
               ? `${monkey.opponentLevels}`
               : direction
                 ? `${direction.opponentArrows}`
@@ -85,9 +90,9 @@ function Result() {
           highlight={!won}
         />
       </section>
-      {(rhythm || precision || direction || monkey) && (
+      {(rhythm || precision || direction || monkey || survival) && (
         <p className="mt-2 text-center text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-          {monkey ? "Levels cleared" : direction ? "Arrows survived" : precision ? "Points scored" : "Notes survived"}
+          {survival ? "Obstacles cleared" : monkey ? "Levels cleared" : direction ? "Arrows survived" : precision ? "Points scored" : "Notes survived"}
         </p>
       )}
 
@@ -107,7 +112,9 @@ function Result() {
 
       <p className="mt-3 text-center text-xs text-muted-foreground tabular-nums">
         Balance {formatEuro(profile.coins)} · Rating {profile.rating}
-        {monkey
+        {survival
+          ? ` · ${survival.playerScore} obstacles · Opponent ${survival.opponentScore} · Seed #${survival.seed.toString(36).slice(-6)}`
+          : monkey
           ? ` · ${monkey.playerLevels} levels · Opponent ${monkey.opponentLevels}`
           : direction
             ? ` · ${direction.playerArrows} arrows · Opponent ${direction.opponentArrows}`
@@ -120,11 +127,12 @@ function Result() {
           !precision &&
           !direction &&
           !monkey &&
+          !survival &&
           lastOutcome.falseStarts > 0 &&
           ` · ${lastOutcome.falseStarts} false start(s)`}
       </p>
 
-      {!rhythm && !precision && !direction && !monkey && (
+      {!rhythm && !precision && !direction && !monkey && !survival && (
         <section className="mt-6">
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
             Round breakdown
