@@ -1,3 +1,4 @@
+import { submitIfFriend } from "@/lib/duel/friend-match";
 import { createFileRoute,useNavigate } from "@tanstack/react-router";
 import { useEffect,useMemo,useRef,useState } from "react";
 import { useDuel } from "@/lib/duel/provider";import { MatchBalance } from "@/components/duel/MatchBalance";import { OpponentOutBanner } from "@/components/duel/OpponentOutBanner";import { sfx } from "@/lib/duel/audio";import { createRng } from "@/lib/duel/engine/rhythm";import { simulateStackOpponent } from "@/lib/duel/engine/casual";
