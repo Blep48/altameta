@@ -1,0 +1,28 @@
+name: Verify build
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --ignore-scripts
+      - run: npm run build
+      - name: Friend challenge API smoke test
+        env:
+          API: https://uhazmkzewagtalbyzgcj.supabase.co/functions/v1/friend-challenge
+          KEY: sb_publishable_Onsx-GUCZWzWmb93TsMbwQ_5hfJJCw3
+        run: |
+          CREATE=$(curl -fsS "$API" -H "apikey: $KEY" -H "content-type: application/json" -d '{"action":"create","gameId":"stack","wagerEur":1,"name":"CI-A","avatar":"A"}')
+          CODE=$(node -e 'const x=JSON.parse(process.argv[1]); process.stdout.write(x.challenge.code)' "$CREATE")
+          CTOKEN=$(node -e 'const x=JSON.parse(process.argv[1]); process.stdout.write(x.token)' "$CREATE")
+          GET=$(curl -fsS "$API" -H "apikey: $KEY" -H "content-type: application/json" -d "{\"action\":\"get\",\"code\":\"$CODE\"}")
+          JOIN=$(curl -fsS "$API" -H "apikey: $KEY" -H "content-type: application/json" -d "{\"action\":\"join\",\"code\":\"$CODE\",\"name\":\"CI-B\",\"avatar\":\"B\"}")
+          GTOKEN=$(node -e 'const x=JSON.parse(process.argv[1]); process.stdout.write(x.token)' "$JOIN")
+          curl -fsS "$API" -H "apikey: $KEY" -H "content-type: application/json" -d "{\"action\":\"submit\",\"code\":\"$CODE\",\"token\":\"$CTOKEN\",\"score\":12}" >/dev/null
+          FINAL=$(curl -fsS "$API" -H "apikey: $KEY" -H "content-type: application/json" -d "{\"action\":\"submit\",\"code\":\"$CODE\",\"token\":\"$GTOKEN\",\"score\":9}")
+          node -e 'const x=JSON.parse(process.argv[1]); if(x.winner!=="creator"||x.challenge.creator_score!==12||x.challenge.guest_score!==9) process.exit(1)' "$FINAL"

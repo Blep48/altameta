@@ -1,3 +1,4 @@
+import { submitIfFriend } from "@/lib/duel/friend-match";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDuel } from "@/lib/duel/provider";
@@ -46,6 +47,7 @@ function MonkeyTest() {
   const end = () => {
     if (finished.current) return;
     finished.current = true; setPhase("over"); sfx.miss();
+    if(activeMatch?.friend){void submitIfFriend(activeMatch,level).then(()=>navigate({to:"/challenge/$code",params:{code:activeMatch.friend!.code}}));return;}
     const outcome = finishMonkeyMatch({playerLevels:level, opponentLevels});
     setTimeout(() => { if(outcome){outcome.won?sfx.win():sfx.lose();navigate({to:"/result"});}else navigate({to:"/"}); }, 1000);
   };

@@ -1,3 +1,4 @@
+import { submitIfFriend } from "@/lib/duel/friend-match";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDuel } from "@/lib/duel/provider";
@@ -66,6 +67,7 @@ function RhythmGame() {
     if (raf.current) cancelAnimationFrame(raf.current);
     setPhase("over");
     sfx.miss();
+    if(activeMatch?.friend){void submitIfFriend(activeMatch,playerNotes).then(()=>navigate({to:"/challenge/$code",params:{code:activeMatch.friend!.code}}));return;}
     const outcome = finishRhythmMatch({
       playerNotes,
       opponentNotes: opponentOut,

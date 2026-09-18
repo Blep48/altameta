@@ -103,6 +103,7 @@ export interface ActiveMatch {
   startedAt: number;
   /** Unique per match; drives the rhythm chart and the precision targets. */
   seed: number;
+  friend?: { code: string; token: string; role: "creator" | "guest" };
 }
 
 export interface LeaderboardEntry {
