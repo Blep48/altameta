@@ -240,7 +240,7 @@ function PrecisionGame() {
       <div className="mt-auto shrink-0 px-5 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
         <button
           type="button"
-          onClick={stop}
+          onPointerDown={stop}
           disabled={phase !== "playing"}
           className="w-full rounded-3xl bg-primary py-[clamp(1rem,5vh,2.5rem)] font-display text-3xl font-bold tracking-[0.3em] text-primary-foreground disabled:opacity-40"
         >
