@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useDuel } from "@/lib/duel/provider";
 import { sfx, startMusic } from "@/lib/duel/audio";
 import { MatchBalance } from "@/components/duel/MatchBalance";
+import { inputNow } from "@/lib/duel/game-loop";
 import {
   TOTAL_ROUNDS,
   average,
@@ -73,7 +74,7 @@ function ReactionGame() {
   const startRound = useCallback(() => {
     setPhase("waiting");
     later(() => {
-      goAt.current = performance.now();
+      goAt.current = inputNow();
       sfx.go();
       setPhase("go");
     }, randomDelayMs());
@@ -116,7 +117,7 @@ function ReactionGame() {
     }
     if (phase === "go") {
       sfx.tap();
-      commitRound(Math.round(performance.now() - goAt.current), false);
+      commitRound(Math.round(inputNow() - goAt.current), false);
     }
   };
 
