@@ -112,18 +112,18 @@ function DirectionGame() {
   const level = Math.floor(destroyed / 6) + 1;
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      <div className="px-5 pt-5 text-center">
+    <main className="mx-auto flex h-[100dvh] w-full max-w-md flex-col overflow-hidden overscroll-none bg-background">
+      <div className="shrink-0 px-5 pt-3 text-center">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">How to play</p>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Swipe in the direction shown by the lowest falling arrow. A wrong swipe or an arrow crossing the danger line ends the run.</p>
       </div>
       <MatchBalance coins={profile.coins} wagerEur={wagerEur} />
-      <header className="grid grid-cols-3 gap-2 px-5 pt-3 text-center">
+      <header className="grid shrink-0 grid-cols-3 gap-2 px-5 pt-2 text-center">
         <Meter label="Destroyed" value={String(destroyed)} />
         <Meter label="Level" value={String(level)} />
         <Meter label="Opponent" value={destroyed >= opponentOut ? `OUT ${opponentOut}` : String(Math.min(destroyed, opponentOut))} />
       </header>
-      <div className="flex items-center justify-between px-5 pt-3 text-xs text-muted-foreground">
+      <div className="flex shrink-0 items-center justify-between px-5 pt-2 text-xs text-muted-foreground">
         <span className="truncate">vs {activeMatch.opponent.username}</span>
         <span>SWIPE ↑ ↓ ← →</span>
       </div>
@@ -150,7 +150,7 @@ function DirectionGame() {
         {phase === "over" && <Overlay title="OUT" text={`${destroyed} arrows · opponent ${opponentOut}`} danger />}
         {flash === "hit" && <div className="pointer-events-none absolute inset-0 bg-primary/5" />}
       </section>
-      <div className="px-5 pb-8 pt-4 text-center text-xs text-muted-foreground">
+      <div className="px-5 pb-3 pt-2 text-center text-xs text-muted-foreground">
         Swipe anywhere inside the arena. Destroy the lowest arrow before it reaches the danger line.
       </div>
     </main>
