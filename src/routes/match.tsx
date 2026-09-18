@@ -48,7 +48,11 @@ function Matchmaking() {
                       ? "/play/direction"
                       : game === "memory"
                         ? "/play/memory"
-                        : "/play/reaction",
+                        : game === "flappy"
+                          ? "/play/flappy"
+                          : game === "dash"
+                            ? "/play/dash"
+                            : "/play/reaction",
             }),
           1600,
         );
