@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useDuel } from "@/lib/duel/provider";
 import { sfx, startMusic } from "@/lib/duel/audio";
+import { OpponentOutBanner } from "@/components/duel/OpponentOutBanner";
 import { MatchBalance } from "@/components/duel/MatchBalance";
 import {
   MAX_STOPS,
@@ -191,7 +192,8 @@ function PrecisionGame() {
         <span className="tabular-nums">speed ×{speedFor(stops).toFixed(1)}</span>
       </div>
 
-      <section className="mx-5 mt-3 shrink rounded-3xl border border-border bg-card px-4 py-[clamp(1rem,4vh,2.5rem)]">
+      <section className="relative mx-5 mt-3 shrink rounded-3xl border border-border bg-card px-4 py-[clamp(1rem,4vh,2.5rem)]">
+        <OpponentOutBanner opponentName={activeMatch.opponent.username} opponentScore={opponentRun.current.points} playerScore={points} outAfterMs={900 + opponentRun.current.stops * 950} label="points" />
         <div className="relative h-14 w-full overflow-hidden rounded-2xl bg-muted/30">
           <span
             className="absolute inset-y-0 rounded-xl bg-primary/25"
