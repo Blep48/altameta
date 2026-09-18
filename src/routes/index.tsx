@@ -7,13 +7,13 @@ import { winRate } from "@/lib/duel/player";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "DUEL — 1v1 Arcade Duels for Demo Balance" },
+      { title: "ALTAMETA — 1v1 Arcade Duels for Demo Balance" },
       {
         name: "description",
         content:
           "Challenge opponents in lightning-fast 1v1 reaction duels. Stake Demo Balance, climb the rating ladder. Play money only.",
       },
-      { property: "og:title", content: "DUEL — 1v1 Arcade Duels" },
+      { property: "og:title", content: "ALTAMETA — 1v1 Arcade Duels" },
       {
         property: "og:description",
         content: "Lightning-fast 1v1 reaction duels with play-money Demo Balance.",
@@ -30,8 +30,8 @@ function Home() {
     <Screen>
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
         <div className="min-w-0">
-          <h1 className="font-display text-4xl font-bold tracking-[0.35em] text-primary text-glow">
-            DUEL
+          <h1 className="font-display text-[2.05rem] font-bold tracking-[0.18em] text-primary text-glow">
+            ALTAMETA
           </h1>
           <p className="mt-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
             1v1 arcade · play money
