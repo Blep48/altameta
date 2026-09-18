@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDuel } from "@/lib/duel/provider";
-import { sfx } from "@/lib/duel/audio";
+import { sfx, startMusic } from "@/lib/duel/audio";
 import { MatchBalance } from "@/components/duel/MatchBalance";
 import {
   TOTAL_ROUNDS,
@@ -26,6 +26,7 @@ export const Route = createFileRoute("/play/reaction")({
 type Phase = "ready" | "countdown" | "waiting" | "go" | "scored" | "false";
 
 function ReactionGame() {
+  useEffect(() => startMusic("reaction"), []);
   const navigate = useNavigate();
   const { activeMatch, finishMatch, ready, profile, wagerEur } = useDuel();
 
