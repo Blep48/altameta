@@ -4,6 +4,7 @@ import { Screen } from "@/components/duel/Screen";
 import { useDuel } from "@/lib/duel/provider";
 import { sfx } from "@/lib/duel/audio";
 import type { ActiveMatch } from "@/lib/duel/types";
+import { getFriendChallenge, getFriendSession } from "@/lib/duel/friend-challenges";
 
 export const Route = createFileRoute("/match")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/match")({
 function Matchmaking() {
   const { game } = Route.useSearch();
   const navigate = useNavigate();
-  const { profile, findMatch, cancelMatch } = useDuel();
+  const { profile, findMatch, startFriendMatch, cancelMatch } = useDuel();
   const [found, setFound] = useState<ActiveMatch | null>(null);
   const started = useRef(false);
 
@@ -32,7 +33,14 @@ function Matchmaking() {
     if (started.current) return () => clearInterval(beeps);
     started.current = true;
 
-    findMatch(game)
+    const friend=getFriendSession();
+    const matching = friend ? getFriendChallenge(friend.code).then(ch => {
+      if(!ch) throw new Error("Challenge expired");
+      const opponentName=friend.role==="creator"?(ch.guest_name||"YOUR FRIEND"):ch.creator_name;
+      const opponentAvatar=friend.role==="creator"?(ch.guest_avatar||"🎮"):ch.creator_avatar;
+      return startFriendMatch({gameId:game,seed:ch.seed,code:friend.code,token:friend.token,role:friend.role,opponentName,opponentAvatar});
+    }) : findMatch(game);
+    matching
       .then((match) => {
         setFound(match);
         sfx.go();
