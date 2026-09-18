@@ -16,8 +16,7 @@ export const Route = createFileRoute("/play/direction")({
 });
 
 type Phase = "ready" | "playing" | "over";
-const ARENA_HEIGHT = 470;
-const DANGER_Y = 400;
+const DANGER_Y_PERCENT = 86;
 const SWIPE_MIN = 34;
 const SYMBOL: Record<Direction, string> = { up: "↑", right: "→", down: "↓", left: "←" };
 
@@ -130,18 +129,17 @@ function DirectionGame() {
       <section
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
-        className={`relative mx-5 mt-3 flex-1 touch-none select-none overflow-hidden rounded-3xl border bg-card ${flash === "miss" ? "animate-shake border-destructive" : "border-border"}`}
-        style={{ minHeight: ARENA_HEIGHT }}
+        className={`relative mx-5 mt-2 min-h-0 flex-1 touch-none select-none overflow-hidden rounded-3xl border bg-card ${flash === "miss" ? "animate-shake border-destructive" : "border-border"}`}
       >
-        <div className="absolute inset-x-0 border-t-2 border-dashed border-destructive/70" style={{ top: DANGER_Y }}>
+        <div className="absolute inset-x-0 border-t-2 border-dashed border-destructive/70" style={{ top: `${DANGER_Y_PERCENT}%` }}>
           <span className="absolute right-3 -top-5 text-[9px] font-bold tracking-[0.2em] text-destructive">DANGER</span>
         </div>
         {phase === "playing" && visible.map((a) => {
           const progress = (elapsed - a.spawnMs) / travelMs(a.index);
-          const y = Math.max(-55, Math.min(DANGER_Y, progress * (DANGER_Y + 55) - 55));
+          const y = Math.max(-12, Math.min(DANGER_Y_PERCENT, progress * (DANGER_Y_PERCENT + 12) - 12));
           const isNext = a.index === nextIndex.current;
           return (
-            <span key={a.index} className={`absolute left-1/2 grid h-14 w-14 -translate-x-1/2 place-items-center rounded-2xl border text-4xl font-bold transition-opacity ${isNext ? "border-primary bg-primary/15 text-primary" : "border-border bg-secondary text-foreground"}`} style={{ top: y }}>
+            <span key={a.index} className={`absolute left-1/2 grid h-14 w-14 -translate-x-1/2 place-items-center rounded-2xl border text-4xl font-bold transition-opacity ${isNext ? "border-primary bg-primary/15 text-primary" : "border-border bg-secondary text-foreground"}`} style={{ top: `${y}%` }}>
               {SYMBOL[a.direction]}
             </span>
           );
