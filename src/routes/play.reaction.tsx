@@ -151,7 +151,7 @@ function ReactionGame() {
       <button
         type="button"
         onPointerDown={handleTap}
-        className={`m-5 flex flex-1 select-none flex-col items-center justify-center rounded-3xl border border-border transition-colors duration-100 ${surface}`}
+        className={`m-3 min-h-0 flex flex-1 select-none flex-col items-center justify-center rounded-3xl border border-border transition-colors duration-100 ${surface}`}
       >
         {phase === "ready" && (
           <span className="font-display text-3xl font-bold tracking-[0.3em]">GET READY</span>
@@ -188,7 +188,7 @@ function ReactionGame() {
         )}
       </button>
 
-      <div className="flex justify-center gap-2 pb-8">
+      <div className="flex shrink-0 justify-center gap-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]>
         {Array.from({ length: TOTAL_ROUNDS }).map((_, i) => {
           const r = rounds[i];
           return (

@@ -190,7 +190,7 @@ function PrecisionGame() {
         <span className="tabular-nums">speed ×{speedFor(stops).toFixed(1)}</span>
       </div>
 
-      <section className="mx-5 mt-6 rounded-3xl border border-border bg-card px-4 py-10">
+      <section className="mx-5 mt-3 shrink rounded-3xl border border-border bg-card px-4 py-[clamp(1rem,4vh,2.5rem)]">
         <div className="relative h-14 w-full overflow-hidden rounded-2xl bg-muted/30">
           <span
             className="absolute inset-y-0 rounded-xl bg-primary/25"
@@ -232,12 +232,12 @@ function PrecisionGame() {
         </p>
       </section>
 
-      <div className="mt-auto px-5 pb-3 pt-3">
+      <div className="mt-auto shrink-0 px-5 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
         <button
           type="button"
           onClick={stop}
           disabled={phase !== "playing"}
-          className="w-full rounded-3xl bg-primary py-10 font-display text-3xl font-bold tracking-[0.3em] text-primary-foreground disabled:opacity-40"
+          className="w-full rounded-3xl bg-primary py-[clamp(1rem,5vh,2.5rem)] font-display text-3xl font-bold tracking-[0.3em] text-primary-foreground disabled:opacity-40"
         >
           STOP
         </button>

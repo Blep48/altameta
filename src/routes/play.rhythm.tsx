@@ -30,8 +30,7 @@ export const Route = createFileRoute("/play/rhythm")({
 
 type Phase = "ready" | "playing" | "over";
 
-const LANE_HEIGHT = 420;
-const HIT_LINE = 60; // px from the bottom of the lane area
+const HIT_LINE = 44; // px from the bottom of the lane area
 
 function RhythmGame() {
   const navigate = useNavigate();
@@ -173,10 +172,9 @@ function RhythmGame() {
       </div>
 
       <section
-        className={`relative mx-5 mt-3 flex-1 overflow-hidden rounded-3xl border bg-card ${
+        className={`relative mx-5 mt-2 min-h-0 flex-1 overflow-hidden rounded-3xl border bg-card ${
           flash === "miss" ? "animate-shake border-destructive" : "border-border"
         }`}
-        style={{ minHeight: LANE_HEIGHT }}
       >
         <div className="absolute inset-y-0 left-1/2 w-px bg-border" />
         <div
@@ -187,13 +185,13 @@ function RhythmGame() {
         {phase === "playing" &&
           visible.map((n) => {
             const progress = 1 - (n.timeMs - elapsed) / n.approachMs;
-            const bottom = LANE_HEIGHT - progress * (LANE_HEIGHT - HIT_LINE) - HIT_LINE;
+            const bottom = `${Math.max(8, 100 - progress * 88)}%`;
             return (
               <span
                 key={n.index}
                 className="absolute h-8 w-[38%] rounded-xl bg-primary shadow-[0_0_18px_color-mix(in_oklab,var(--primary)_60%,transparent)]"
                 style={{
-                  bottom: `${Math.max(bottom, HIT_LINE - 16)}px`,
+                  bottom,
                   left: n.lane === 0 ? "6%" : "56%",
                 }}
               />
@@ -227,14 +225,14 @@ function RhythmGame() {
         )}
       </section>
 
-      <div className="grid grid-cols-2 gap-3 px-5 pb-3 pt-2">
+      <div className="grid shrink-0 grid-cols-2 gap-3 px-5 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
         {[0, 1].map((lane) => (
           <button
             key={lane}
             type="button"
             aria-label={lane === 0 ? "Left note" : "Right note"}
             onPointerDown={() => tapLane(lane)}
-            className="select-none rounded-2xl border border-border bg-secondary py-7 font-display text-2xl font-bold tracking-[0.2em] text-foreground transition-transform duration-75 active:scale-95 active:bg-primary active:text-primary-foreground"
+            className="select-none rounded-2xl border border-border bg-secondary py-[clamp(0.7rem,2.8vh,1.75rem)] font-display text-2xl font-bold tracking-[0.2em] text-foreground transition-transform duration-75 active:scale-95 active:bg-primary active:text-primary-foreground"
           >
             {lane === 0 ? "◀" : "▶"}
           </button>
