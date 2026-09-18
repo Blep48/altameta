@@ -135,7 +135,7 @@ function Home() {
               <span className="min-w-0">
                 <span className="block truncate text-sm font-semibold">{m.opponentName}</span>
                 <span className="block text-xs text-muted-foreground tabular-nums">
-                  {m.gameId === "reaction" ? `${m.playerAvgMs} ms vs ${m.opponentAvgMs} ms` : `${m.playerAvgMs} vs ${m.opponentAvgMs}`}{m.friendChallengeCode ? " · FRIEND" : ""}
+                  {m.gameId === "reaction" ? `${m.playerAvgMs} ms vs ${m.opponentAvgMs} ms` : `${m.playerAvgMs} vs ${m.opponentAvgMs}`}{m.friendChallengeCode ? " · FRIEND" : ""}{m.ladderStreak != null ? ` · ∞ LADDER ${m.ladderStreak}` : ""}
                 </span>
               </span>
               <span
@@ -145,7 +145,7 @@ function Home() {
               >
                 {m.tied ? "TIE" : m.won ? "WIN" : "LOSS"}
                 <span className="block text-[11px] font-medium">
-                  {formatEuro(m.coinDelta, true)}
+                  {m.ladderStreak != null && m.won ? `CASH ${formatEuro(m.ladderPrizeUnits ?? 0)}` : formatEuro(m.coinDelta, true)}
                 </span>
               </span>
             </li>
