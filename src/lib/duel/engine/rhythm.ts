@@ -44,7 +44,7 @@ export function approachMsFor(level: number): number {
 
 export function windowMsFor(level: number): number {
   // Generous timing: if the note overlaps the hit line at all, it counts.
-  return Math.max(150, 300 - level * 8);
+  return Math.max(75, 135 - level * 4);
 }
 
 function bpmFor(level: number): number {

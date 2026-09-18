@@ -62,8 +62,8 @@ function Matchmaking() {
                             ? "/play/dash"
                             : game === "stack"
                               ? "/play/stack"
-                              : game === "penalty"
-                                ? "/play/penalty"
+                              : game === "knife"
+                                ? "/play/knife"
                                 : "/play/reaction",
             }),
           1600,

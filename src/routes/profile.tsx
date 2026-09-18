@@ -17,7 +17,8 @@ export const Route = createFileRoute("/profile")({
 });
 
 function Profile() {
-  const { profile, updateProfile, resetProgress } = useDuel();
+  const { profile, history, updateProfile, resetProgress } = useDuel();
+  const scores = highScores(history);
 
   return (
     <Screen>
@@ -64,11 +65,10 @@ function Profile() {
         <StatTile label="Games played" value={profile.gamesPlayed} />
         <StatTile label="Wins" value={profile.wins} accent="primary" />
         <StatTile label="Losses" value={profile.losses} accent="destructive" />
-        <StatTile
-          label="Best reaction"
-          value={profile.bestReactionMs ? `${profile.bestReactionMs} ms` : "—"}
-        />
+
       </section>
+
+      <section className="mt-6"><h2 className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">Highscores</h2><div className="mt-3 grid grid-cols-2 gap-3">{scores.map(s=><StatTile key={s.id} label={s.name} value={s.value}/>)}</div></section>
 
       <button
         type="button"
@@ -87,3 +87,5 @@ function Profile() {
     </Screen>
   );
 }
+
+function highScores(history: ReturnType<typeof useDuel>["history"]) { const defs=[["reaction","REACTION"],["rhythm","RHYTHM"],["direction","DIRECTION"],["memory","MONKEY TEST"],["flappy","FLAPPY"],["dash","DINO RUN"],["stack","STACK"],["knife","KNIFE IT"],["precision","PRECISION"]] as const; return defs.map(([id,name])=>{const rows=history.filter(h=>h.gameId===id);if(!rows.length)return{id,name,value:"—"};if(id==="reaction"){const v=Math.min(...rows.map(r=>r.playerAvgMs));return{id,name,value:`${Math.round(v)} ms`}}const v=Math.max(...rows.map(r=>r.survival?.playerScore??r.rhythm?.playerNotes??r.direction?.playerArrows??r.monkey?.playerLevels??r.precision?.playerPoints??r.playerAvgMs));return{id,name,value:String(Math.round(v))}}); }
