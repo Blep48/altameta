@@ -87,7 +87,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content: "Fast 1v1 arcade duels with Duel Coins. Play-money only.",
       },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:site_name", content: "ALTAMETA" },
+      { property: "og:image", content: "https://altameta.vercel.app/altameta-icon.svg" },
+      { name: "twitter:card", content: "summary" },
+      { name: "twitter:image", content: "https://altameta.vercel.app/altameta-icon.svg" },
       { name: "theme-color", content: "#0b0d12" },
     ],
     links: [
