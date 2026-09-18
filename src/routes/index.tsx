@@ -132,15 +132,15 @@ function Home() {
               <span className="min-w-0">
                 <span className="block truncate text-sm font-semibold">{m.opponentName}</span>
                 <span className="block text-xs text-muted-foreground tabular-nums">
-                  {m.playerAvgMs} ms vs {m.opponentAvgMs} ms
+                  {m.gameId === "reaction" ? `${m.playerAvgMs} ms vs ${m.opponentAvgMs} ms` : `${m.playerAvgMs} vs ${m.opponentAvgMs}`}{m.friendChallengeCode ? " · FRIEND" : ""}
                 </span>
               </span>
               <span
                 className={`shrink-0 text-right font-display text-sm font-bold tabular-nums ${
-                  m.won ? "text-primary" : "text-destructive"
+                  m.tied ? "text-accent" : m.won ? "text-primary" : "text-destructive"
                 }`}
               >
-                {m.won ? "WIN" : "LOSS"}
+                {m.tied ? "TIE" : m.won ? "WIN" : "LOSS"}
                 <span className="block text-[11px] font-medium">
                   {formatEuro(m.coinDelta, true)}
                 </span>
