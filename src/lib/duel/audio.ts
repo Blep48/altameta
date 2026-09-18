@@ -78,6 +78,7 @@ export function stopMusic() {
 }
 
 function playTrack(src: string, volume: number) {
+  bindVisibilityPause();
   const audio = new Audio(src);
   music = audio;
   audio.loop = true;
@@ -89,9 +90,16 @@ function playTrack(src: string, volume: number) {
 
 export function startMusic(style: MusicStyle): () => void {
   desiredMusic = style;
-  stopMusic();
   if (typeof window === "undefined" || muted) return () => {};
   bindAudioUnlock();
+
+  if (music && !music.paused) {
+    const sameMenuTrack = style === "menu" && music.src === TRACKS.menu;
+    const sameGameTrack = style !== "menu" && selectedGameTrack !== null && music.src === selectedGameTrack;
+    if (sameMenuTrack || sameGameTrack) return () => {};
+  }
+
+  stopMusic();
 
   if (style === "menu") {
     selectedGameTrack = null;
