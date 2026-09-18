@@ -18,9 +18,9 @@ export function OpponentOutBanner({ opponentName, opponentScore, playerScore, ou
   if (!out) return null;
   const needed = Math.max(0, opponentScore - playerScore + 1);
   const winnings = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(wagerEur * 1.9);
-  return <div className="pointer-events-none absolute inset-x-3 top-3 z-30 rounded-xl border border-primary/40 bg-background/90 px-3 py-2 text-center shadow-lg backdrop-blur-sm">
-    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">{opponentName} is out · {opponentScore} {label}</p>
-    {secured ? <p className="mt-0.5 text-xs text-foreground">BET SECURED ✓ · WIN <strong className="text-sm font-black text-primary">{winnings}</strong> · Keep playing</p>
-      : <p className="mt-0.5 text-xs font-semibold text-foreground">{needed} {label} {needed === 1 ? "is" : "are"} all you need to secure the bet</p>}
+  return <div className="pointer-events-none fixed inset-x-0 top-[max(0.45rem,env(safe-area-inset-top))] z-50 mx-auto w-fit max-w-[calc(100vw-1rem)] rounded-full border border-primary/35 bg-background/92 px-3 py-1.5 text-center shadow-lg backdrop-blur-md animate-pop">
+    <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-primary">{opponentName} OUT · {opponentScore} {label}</p>
+    {secured ? <p className="text-[11px] leading-tight text-foreground">SECURED ✓ · <strong className="font-black text-primary">{winnings}</strong> · KEEP PLAYING</p>
+      : <p className="text-[11px] font-semibold leading-tight text-foreground">{needed} MORE TO SECURE</p>}
   </div>;
 }
