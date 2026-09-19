@@ -139,6 +139,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       const match = await localMatchmaking.find({
         gameId,
         playerRating: profile.rating,
+        peakLeagueIndex: profile.peakLeagueIndex,
         signal: controller.signal,
       });
       setActiveMatch(match);

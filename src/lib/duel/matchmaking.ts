@@ -1,11 +1,12 @@
 import type { ActiveMatch, Opponent } from "./types";
+import { botRatingWindow, peakLeagueIndex } from "./leagues";
 
 /**
  * Matchmaking service contract. The local implementation fakes an opponent;
  * a networked implementation can replace it without UI changes.
  */
 export interface MatchmakingService {
-  find(args: { gameId: string; playerRating: number; signal?: AbortSignal }): Promise<ActiveMatch>;
+  find(args: { gameId: string; playerRating: number; peakLeagueIndex?: number; signal?: AbortSignal }): Promise<ActiveMatch>;
 }
 
 const NAMES = [
@@ -36,11 +37,10 @@ function randomBetween(min: number, max: number) {
   return min + Math.random() * (max - min);
 }
 
-export function createBotOpponent(playerRating: number): Opponent {
-  const rating = Math.max(
-    800,
-    Math.round(playerRating + randomBetween(-120, 120)),
-  );
+export function createBotOpponent(playerRating: number, storedPeakLeague?: number): Opponent {
+  const peak = peakLeagueIndex(playerRating, storedPeakLeague);
+  const [minRating,maxRating] = botRatingWindow(playerRating, peak);
+  const rating = Math.round(randomBetween(minRating,maxRating));
   // Stronger opponents react faster.
   const skill = Math.min(1, Math.max(0, (rating - 900) / 700));
   const meanReactionMs = Math.round(320 - skill * 110 + randomBetween(-15, 15));
@@ -55,14 +55,14 @@ export function createBotOpponent(playerRating: number): Opponent {
 }
 
 export const localMatchmaking: MatchmakingService = {
-  find({ gameId, playerRating, signal }) {
+  find({ gameId, playerRating, peakLeagueIndex: peak, signal }) {
     const wait = randomBetween(2000, 4000);
     return new Promise<ActiveMatch>((resolve, reject) => {
       const timer = setTimeout(() => {
         resolve({
           id: `m_${Date.now().toString(36)}`,
           gameId,
-          opponent: createBotOpponent(playerRating),
+          opponent: createBotOpponent(playerRating, peak),
           startedAt: Date.now(),
           seed: (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0,
         });

@@ -1,5 +1,6 @@
 import { STARTING_BALANCE } from "./economy";
 import type { PlayerProfile } from "./types";
+import { peakLeagueIndex } from "./leagues";
 
 export const RATING_DELTA = 15;
 export const STARTING_RATING = 1200;
@@ -31,6 +32,7 @@ export function createDefaultProfile(): PlayerProfile {
     losses: 0,
     bestReactionMs: null,
     highscores: {},
+    peakLeagueIndex: peakLeagueIndex(STARTING_RATING),
   };
 }
 
@@ -63,5 +65,6 @@ export function applyMatchToProfile(
     losses: profile.losses + (args.won ? 0 : 1),
     bestReactionMs: best,
     highscores: profile.highscores ?? {},
+    peakLeagueIndex: peakLeagueIndex(Math.max(profile.rating, profile.rating + args.ratingDelta), profile.peakLeagueIndex),
   };
 }

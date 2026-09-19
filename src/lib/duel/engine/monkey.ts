@@ -26,8 +26,10 @@ export function simulateMonkeyOpponent(seed: number, opponent: Opponent): number
   const rng = createRng(seed ^ 0x243f6a88);
   const skill = Math.min(1, Math.max(0, (opponent.rating - 850) / 700));
   let cleared = 0;
-  for (let level = 0; level < 20; level++) {
-    const failChance = Math.min(0.62, 0.055 + level * 0.032) * (1.35 - skill * 0.55);
+  for (let level = 0; level < 10; level++) {
+    // Humans clearing 4-5 boards are already doing well. Keep bots in that world
+    // instead of occasionally producing absurd 12-15 level runs.
+    const failChance = Math.min(0.78, 0.16 + level * 0.075) * (1.18 - skill * 0.28);
     if (rng() < failChance) break;
     cleared++;
   }
