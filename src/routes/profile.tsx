@@ -3,6 +3,7 @@ import { Screen, StatTile, TopBar } from "@/components/duel/Screen";
 import { useDuel } from "@/lib/duel/provider";
 import { AVATARS, winRate } from "@/lib/duel/player";
 import { formatEuro } from "@/lib/duel/economy";
+import { leagueForIndex, peakLeagueIndex } from "@/lib/duel/leagues";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -33,7 +34,8 @@ function Profile() {
           aria-label="Username"
           className="mt-3 w-full rounded-xl border border-border bg-background px-3 py-2 text-center font-display text-lg font-bold tracking-[0.2em] outline-none focus:border-primary"
         />
-        <p className="mt-3 font-display text-3xl font-bold tabular-nums text-primary">
+        <p className="mt-3 text-[11px] font-bold uppercase tracking-[.22em] text-accent">{leagueForIndex(peakLeagueIndex(profile.rating,profile.peakLeagueIndex))}</p>
+        <p className="mt-1 font-display text-3xl font-bold tabular-nums text-primary">
           {profile.rating} <span className="text-sm tracking-[0.2em]">MMR</span>
         </p>
       </section>
