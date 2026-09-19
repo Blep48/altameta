@@ -11,6 +11,8 @@ export interface PlayerProfile {
   losses: number;
   bestReactionMs: number | null;
   highscores?: Record<string, number>;
+  /** Highest league ever reached. It never decreases when rating falls. */
+  peakLeagueIndex?: number;
 }
 
 export interface Opponent {
