@@ -64,7 +64,9 @@ export function setMuted(value: boolean) {
   }
 }
 
-export function resetGameTrack() { selectedGameTrack = null; }\n\nfunction chooseGameTrack() {
+export function resetGameTrack() { selectedGameTrack = null; }
+
+function chooseGameTrack() {
   if (Math.floor(Math.random() * 1000) === 0) return TRACKS.secret;
   return TRACKS.games[Math.floor(Math.random() * TRACKS.games.length)]!;
 }
