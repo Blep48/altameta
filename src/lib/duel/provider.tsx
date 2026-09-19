@@ -124,7 +124,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
   const ladderRef=useRef<LadderRun|null>(null);
   useEffect(()=>{ladderRef.current=ladder},[ladder]);
   const settlementForMode=useCallback((won:boolean,amount:number)=>ladderRef.current?.active?0:settlementAmount(won,amount),[]);
-  const tagLadderOutcome=useCallback((outcome:MatchOutcome)=>{const run=ladderRef.current;if(!run?.active||run.gameId!==outcome.gameId)return outcome;const streak=run.streak+(outcome.won?1:0);return {...outcome,ladderStreak:streak,ladderPrizeUnits:outcome.won?ladderPrizeUnits({...run,streak}):0}},[]);
+  const tagLadderOutcome=useCallback((outcome:MatchOutcome)=>{const run=ladderRef.current;if(!run?.active||run.gameId!==outcome.gameId)return outcome;const streak=run.streak+(outcome.won?1:0);const next:LadderRun=outcome.won?{...run,streak}:{...run,active:false,lost:true};writeLadder(next);setLadder(next);ladderRef.current=next;return {...outcome,ladderStreak:streak,ladderPrizeUnits:outcome.won?ladderPrizeUnits(next):0}},[]);
 
   const findMatchCore = useCallback(
     async (gameId: string, chargeEntry: boolean) => {
@@ -190,10 +190,6 @@ export function DuelProvider({ children }: { children: ReactNode }) {
   const continueLadder=useCallback(async()=>{const run=ladderRef.current;if(!run?.active)throw new Error("No active ladder");return findMatchCore(run.gameId,false)},[findMatchCore]);
   const cashOutLadder=useCallback(()=>{const run=ladderRef.current;if(!run?.active||run.streak<1)return;const prize=ladderPrizeUnits(run);setProfile(prev=>{const next={...prev,coins:prev.coins+prize};storage.write(STORAGE_KEYS.profile,next);return next});writeLadder(null);setLadder(null);ladderRef.current=null},[]);
 
-  useEffect(()=>{if(!lastOutcome)return;const run=ladderRef.current;if(!run?.active||lastOutcome.gameId!==run.gameId)return;
-    if(lastOutcome.won){const next={...run,streak:run.streak+1};writeLadder(next);setLadder(next);ladderRef.current=next}
-    else{const ended={...run,active:false,lost:true};writeLadder(ended);setLadder(ended);ladderRef.current=ended}
-  },[lastOutcome]);
 
   const cancelMatch = useCallback(() => {
     abortRef.current?.abort();
