@@ -21,7 +21,7 @@ function Stack() {
   const seed = activeMatch?.seed ?? 1;
   const bot = useMemo(() => activeMatch ? simulateStackOpponent(seed, activeMatch.opponent) : 0, [seed, activeMatch]);
 
-  useEffect(() => { if (ready && !activeMatch) nav({to:"/"}); }, [ready, activeMatch, nav]);
+  useEffect(() => { if (ready && !activeMatch && !done.current) nav({to:"/"}); }, [ready, activeMatch, nav]);
 
   const end = () => {
     if (done.current || !activeMatch) return;
