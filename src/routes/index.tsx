@@ -5,6 +5,7 @@ import { Screen, StatTile } from "@/components/duel/Screen";
 import { useDuel } from "@/lib/duel/provider";
 import { formatEuro } from "@/lib/duel/economy";
 import { winRate } from "@/lib/duel/player";
+import { leagueForIndex, peakLeagueIndex } from "@/lib/duel/leagues";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -69,7 +70,7 @@ function Home() {
               {profile.username}
             </span>
             <span className="block text-xs text-muted-foreground tabular-nums">
-              {profile.rating} MMR
+              {leagueForIndex(peakLeagueIndex(profile.rating,profile.peakLeagueIndex))} · {profile.rating} MMR
             </span>
           </span>
         </Link>
