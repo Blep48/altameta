@@ -1,4 +1,5 @@
 import type { ActiveMatch, Opponent } from "./types";
+import { botRatingWindow, peakLeagueIndex } from "./leagues";
 
 /**
  * Matchmaking service contract. The local implementation fakes an opponent;
@@ -36,11 +37,10 @@ function randomBetween(min: number, max: number) {
   return min + Math.random() * (max - min);
 }
 
-export function createBotOpponent(playerRating: number): Opponent {
-  const rating = Math.max(
-    800,
-    Math.round(playerRating + randomBetween(-120, 120)),
-  );
+export function createBotOpponent(playerRating: number, storedPeakLeague?: number): Opponent {
+  const peak = peakLeagueIndex(playerRating, storedPeakLeague);
+  const [minRating,maxRating] = botRatingWindow(playerRating, peak);
+  const rating = Math.round(randomBetween(minRating,maxRating));
   // Stronger opponents react faster.
   const skill = Math.min(1, Math.max(0, (rating - 900) / 700));
   const meanReactionMs = Math.round(320 - skill * 110 + randomBetween(-15, 15));
