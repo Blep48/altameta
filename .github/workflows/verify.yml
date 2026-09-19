@@ -11,4 +11,5 @@ jobs:
         with:
           node-version: 22
       - run: npm install --ignore-scripts
+      - run: npm run typecheck
       - run: npm run build
