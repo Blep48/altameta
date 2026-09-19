@@ -36,11 +36,11 @@ function Result() {
   const monkey = lastOutcome.monkey;
   const survival = lastOutcome.survival;
   const ladderMatch = lastOutcome.ladderStreak != null;
-  const ladderShownPrize = lastOutcome.ladderPrizeUnits ?? 0;
+  const ladderShownPrize = ladderMatch && won && ladder?.active && ladder.gameId===lastOutcome.gameId ? ladderPrizeUnits(ladder) : (lastOutcome.ladderPrizeUnits ?? 0);
 
   useEffect(() => {
     if (!lastOutcome?.won) { setAnimatedWin(0); return; }
-    const target = Math.max(0, lastOutcome.ladderPrizeUnits ?? lastOutcome.coinDelta);
+    const target = Math.max(0, ladderShownPrize || lastOutcome.coinDelta);
     const started = performance.now();
     let frame = 0;
     const tick = (now: number) => {
@@ -51,7 +51,7 @@ function Result() {
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [lastOutcome]);
+  }, [lastOutcome, ladderShownPrize]);
 
   useEffect(() => {
     if (!cashout) return;
@@ -60,15 +60,27 @@ function Result() {
     frame=requestAnimationFrame(tick);return()=>cancelAnimationFrame(frame);
   },[cashout]);
 
-  if(cashout) return <Screen className="justify-center">
-    <div className="animate-pop rounded-[2rem] border border-primary bg-primary/10 px-5 py-10 text-center neon-glow">
-      <p className="text-[11px] font-black uppercase tracking-[.32em] text-primary">∞ LADDER CASH OUT</p>
-      <p className="mt-5 text-xs uppercase tracking-[.2em] text-muted-foreground">{cashout.streak} win{cashout.streak===1?"":"s"} · {cashout.eliminations} players represented</p>
-      <p className="mt-4 font-display text-6xl font-black tabular-nums text-primary text-glow">{formatEuro(animatedCashout)}</p>
-      <p className="mt-3 text-xs text-muted-foreground">DEMO BALANCE SECURED</p>
-    </div>
-    <button type="button" onClick={()=>navigate({to:"/"})} className="mt-8 w-full rounded-2xl bg-primary py-5 font-display text-lg font-black tracking-[.22em] text-primary-foreground">BACK TO HOME</button>
-  </Screen>;
+  if(cashout) {
+    const checkpoints=Array.from({length:Math.min(cashout.streak,12)},(_,i)=>cashout.streak-Math.min(cashout.streak,12)+i+1);
+    const progress=cashout.amount ? Math.min(1,animatedCashout/cashout.amount) : 0;
+    return <Screen className="justify-center">
+      <div className="animate-pop rounded-[2rem] border border-primary bg-primary/10 px-5 py-7 text-center neon-glow">
+        <p className="text-[11px] font-black uppercase tracking-[.32em] text-primary">∞ LADDER CASH OUT</p>
+        <div className="mx-auto mt-6 flex h-64 max-w-xs items-stretch gap-4 text-left">
+          <div className="relative w-5 shrink-0 rounded-full bg-secondary">
+            <div className="absolute bottom-0 left-0 w-full rounded-full bg-primary transition-[height] duration-75" style={{height:`${progress*100}%`}}/>
+            {checkpoints.map((streak,i)=><span key={streak} className="absolute left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border border-primary bg-background" style={{bottom:`${((i+1)/checkpoints.length)*100}%`,transform:"translate(-50%,50%)"}}/> )}
+          </div>
+          <div className="relative flex-1">
+            {checkpoints.map((streak,i)=>{const reached=progress>=((i+1)/checkpoints.length);return <div key={streak} className="absolute left-0 right-0 -translate-y-1/2" style={{bottom:`${((i+1)/checkpoints.length)*100}%`}}><span className={`text-[10px] font-bold uppercase tracking-[.12em] ${reached?"text-primary":"text-muted-foreground"}`}>{ladderEliminations(streak)} players · {formatEuro(Math.round(lastOutcome.wagerEur*100*ladderMultiplier(streak)))}</span></div>})}
+          </div>
+        </div>
+        <p className="mt-5 text-[10px] uppercase tracking-[.2em] text-muted-foreground">{cashout.streak} wins · cash out secured</p>
+        <p className="mt-2 break-all font-display text-4xl font-black tabular-nums text-primary text-glow">{formatEuro(animatedCashout)}</p>
+      </div>
+      <button type="button" onClick={()=>navigate({to:"/"})} className="mt-6 w-full rounded-2xl bg-primary py-5 font-display text-lg font-black tracking-[.22em] text-primary-foreground">BACK TO HOME</button>
+    </Screen>;
+  }
 
   return (
     <Screen>
