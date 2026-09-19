@@ -81,6 +81,9 @@ export interface MatchOutcome {
   won: boolean;
   tied?: boolean;
   friendChallengeCode?: string;
+  /** Present for matches played as part of an Infinite Ladder run. */
+  ladderStreak?: number;
+  ladderPrizeUnits?: number;
   coinDelta: number;
   /** Demo wager selected for this match, expressed in euros. */
   wagerEur: number;
