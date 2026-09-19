@@ -17,7 +17,16 @@ export const Route = createFileRoute("/result")({
   component: Result,
 });
 
-function ladderCelebrationName(streak:number) {\n  if (streak >= 6) return "ALTAMETA";\n  if (streak >= 5) return "ULTRAMETA";\n  if (streak >= 4) return "MEGAMETA";\n  if (streak >= 3) return "SUPERMETA";\n  if (streak >= 2) return "POGGAMETA";\n  return "SIUMMAMETA";\n}\n\nfunction Result() {
+function ladderCelebrationName(streak:number) {
+  if (streak >= 6) return "ALTAMETA";
+  if (streak >= 5) return "ULTRAMETA";
+  if (streak >= 4) return "MEGAMETA";
+  if (streak >= 3) return "SUPERMETA";
+  if (streak >= 2) return "POGGAMETA";
+  return "SIUMMAMETA";
+}
+
+function Result() {
   const { lastOutcome, profile, ready, canPlay, ladder, cashOutLadder } = useDuel();
   const navigate = useNavigate();
   const [animatedWin, setAnimatedWin] = useState(0);
