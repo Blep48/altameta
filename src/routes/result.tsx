@@ -17,7 +17,7 @@ export const Route = createFileRoute("/result")({
   component: Result,
 });
 
-function ladderCelebrationName(streak:number) {
+function ladderCelebrationName(streak: number): string {
   if (streak >= 6) return "ALTAMETA";
   if (streak >= 5) return "ULTRAMETA";
   if (streak >= 4) return "MEGAMETA";
