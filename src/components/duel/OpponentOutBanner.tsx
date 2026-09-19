@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { sfx } from "@/lib/duel/audio";
 
 export function OpponentOutBanner({ opponentName, opponentScore, playerScore, outAfterMs, wagerEur, securedEur, label = "points" }: {
-  opponentName: string; opponentScore: number; playerScore: number; outAfterMs: number; wagerEur: number; securedEur?: number; label?: string;
+  opponentName: string; opponentScore: number; playerScore: number; outAfterMs: number; wagerEur: number; securedEur?: number | undefined; label?: string | undefined;
 }) {
   const [out, setOut] = useState(false);
   const announced = useRef(false);
