@@ -6,7 +6,7 @@ import { botRatingWindow, peakLeagueIndex } from "./leagues";
  * a networked implementation can replace it without UI changes.
  */
 export interface MatchmakingService {
-  find(args: { gameId: string; playerRating: number; signal?: AbortSignal }): Promise<ActiveMatch>;
+  find(args: { gameId: string; playerRating: number; peakLeagueIndex?: number; signal?: AbortSignal }): Promise<ActiveMatch>;
 }
 
 const NAMES = [
@@ -55,14 +55,14 @@ export function createBotOpponent(playerRating: number, storedPeakLeague?: numbe
 }
 
 export const localMatchmaking: MatchmakingService = {
-  find({ gameId, playerRating, signal }) {
+  find({ gameId, playerRating, peakLeagueIndex: peak, signal }) {
     const wait = randomBetween(2000, 4000);
     return new Promise<ActiveMatch>((resolve, reject) => {
       const timer = setTimeout(() => {
         resolve({
           id: `m_${Date.now().toString(36)}`,
           gameId,
-          opponent: createBotOpponent(playerRating),
+          opponent: createBotOpponent(playerRating, peak),
           startedAt: Date.now(),
           seed: (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0,
         });
