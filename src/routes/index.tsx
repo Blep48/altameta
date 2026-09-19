@@ -28,11 +28,11 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   useEffect(() => startMusic("menu"), []);
-  const { profile, history, muted, toggleMuted, canPlay } = useDuel();
+  const { profile, history, muted, toggleMuted, canPlay, updateProfile } = useDuel();
   const [withdrawOpen,setWithdrawOpen]=useState(false);
   const [withdrawAmount,setWithdrawAmount]=useState("50");
   const [paymentToast,setPaymentToast]=useState<number|null>(null);
-  const fakeWithdraw=()=>{const amount=Math.max(0,Math.min(Number(withdrawAmount)||0,profile.coins/100));if(!amount)return;setWithdrawOpen(false);setPaymentToast(amount);window.setTimeout(()=>setPaymentToast(null),4200)};
+  const fakeWithdraw=()=>{const amount=Math.max(0,Math.min(Number(withdrawAmount)||0,profile.coins/100));if(!amount)return;updateProfile({coins:profile.coins-Math.round(amount*100)});setWithdrawOpen(false);setPaymentToast(amount);window.setTimeout(()=>setPaymentToast(null),4200)};
 
   return (
     <Screen>
