@@ -18,7 +18,7 @@ function Knife(){
   const done=useRef(false),last=useRef(0),raf=useRef<number|null>(null),angle=useRef(0),scoreRef=useRef(0);
   const knives=useRef<number[]>([]),projectile=useRef<number|null>(null),queuedHit=useRef<number|null>(null);
   const seed=activeMatch?.seed??1,bot=useMemo(()=>activeMatch?simulateKnifeOpponent(seed,activeMatch.opponent):0,[seed,activeMatch]);
-  useEffect(()=>{if(ready&&!activeMatch)nav({to:"/"});},[ready,activeMatch,nav]);
+  useEffect(()=>{if(ready&&!activeMatch&&!done.current)nav({to:"/"});},[ready,activeMatch,nav]);
 
   const finish=()=>{if(done.current||!activeMatch)return;done.current=true;setOver(true);if(raf.current)cancelAnimationFrame(raf.current);sfx.miss();
     if(activeMatch.friend){void submitIfFriend(activeMatch,scoreRef.current).then(()=>nav({to:"/challenge/$code",params:{code:activeMatch.friend!.code}}));return}
