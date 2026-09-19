@@ -17,7 +17,7 @@ export const Route = createFileRoute("/result")({
   component: Result,
 });
 
-function Result() {
+function ladderCelebrationName(streak:number) {\n  if (streak >= 6) return "ALTAMETA";\n  if (streak >= 5) return "ULTRAMETA";\n  if (streak >= 4) return "MEGAMETA";\n  if (streak >= 3) return "SUPERMETA";\n  if (streak >= 2) return "POGGAMETA";\n  return "SIUMMAMETA";\n}\n\nfunction Result() {
   const { lastOutcome, profile, ready, canPlay, ladder, cashOutLadder } = useDuel();
   const navigate = useNavigate();
   const [animatedWin, setAnimatedWin] = useState(0);
@@ -44,7 +44,7 @@ function Result() {
     const started = performance.now();
     let frame = 0;
     const tick = (now: number) => {
-      const progress = Math.min(1, (now - started) / Math.min(1800, Math.max(850, 700 + Math.log10(Math.max(10,target))*260)));
+      const duration = ladderMatch ? Math.min(4200, Math.max(2200, 1700 + Math.log10(Math.max(10,target))*420)) : Math.min(1800, Math.max(850, 700 + Math.log10(Math.max(10,target))*260));\n      const progress = Math.min(1, (now - started) / duration);
       const eased = 1 - Math.pow(1 - progress, 3);
       setAnimatedWin(Math.round(target * eased));
       if (progress < 1) frame = requestAnimationFrame(tick);
@@ -94,10 +94,10 @@ function Result() {
             won ? "text-primary text-glow" : "text-destructive"
           }`}
         >
-          {won ? "ALTAMETA" : "BASSAMETA"}
+          {won ? (ladderMatch ? ladderCelebrationName(lastOutcome.ladderStreak ?? 1) : "ALTAMETA") : "BASSAMETA"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          {won ? "You took the duel." : "Opponent takes this one."}
+          {won ? (ladderMatch ? `${ladderMultiplier(lastOutcome.ladderStreak ?? 1).toFixed(1)}× LADDER MULTIPLIER` : "You took the duel.") : "Opponent takes this one."}
         </p>
       </div>
 
