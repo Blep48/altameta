@@ -43,7 +43,7 @@ function DirectionGame() {
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
-    if (ready && !activeMatch) navigate({ to: "/" });
+    if (ready && !activeMatch && !finished.current) navigate({ to: "/" });
   }, [ready, activeMatch, navigate]);
 
   const end = (count: number) => {
