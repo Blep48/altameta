@@ -53,7 +53,10 @@ function Result() {
     const started = performance.now();
     let frame = 0;
     const tick = (now: number) => {
-      const duration = ladderMatch ? Math.min(4200, Math.max(2200, 1700 + Math.log10(Math.max(10,target))*420)) : Math.min(1800, Math.max(850, 700 + Math.log10(Math.max(10,target))*260));\n      const progress = Math.min(1, (now - started) / duration);
+      const duration = ladderMatch
+        ? Math.min(4200, Math.max(2200, 1700 + Math.log10(Math.max(10, target)) * 420))
+        : Math.min(1800, Math.max(850, 700 + Math.log10(Math.max(10, target)) * 260));
+      const progress = Math.min(1, (now - started) / duration);
       const eased = 1 - Math.pow(1 - progress, 3);
       setAnimatedWin(Math.round(target * eased));
       if (progress < 1) frame = requestAnimationFrame(tick);
