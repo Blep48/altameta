@@ -81,6 +81,9 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     const m = storage.read<boolean>(STORAGE_KEYS.muted) ?? false;
     setMutedState(m);
     setAudioMuted(m);
+    const savedLadder = readLadder();
+    setLadder(savedLadder);
+    ladderRef.current = savedLadder;
     setReady(true);
   }, []);
 
@@ -91,7 +94,6 @@ export function DuelProvider({ children }: { children: ReactNode }) {
 
   const updateProfile: DuelContextValue["updateProfile"] = useCallback(
     (patch) => {
-      outcome=tagLadderOutcome(outcome);
       setProfile((prev) => {
         const next = { ...prev, ...patch };
         storage.write(STORAGE_KEYS.profile, next);
@@ -124,14 +126,16 @@ export function DuelProvider({ children }: { children: ReactNode }) {
   const settlementForMode=useCallback((won:boolean,amount:number)=>ladderRef.current?.active?0:settlementAmount(won,amount),[]);
   const tagLadderOutcome=useCallback((outcome:MatchOutcome)=>{const run=ladderRef.current;if(!run?.active||run.gameId!==outcome.gameId)return outcome;const streak=run.streak+(outcome.won?1:0);return {...outcome,ladderStreak:streak,ladderPrizeUnits:outcome.won?ladderPrizeUnits({...run,streak}):0}},[]);
 
-  const findMatch = useCallback(
-    async (gameId: string) => {
-      if (!canAfford(profile.coins, wagerEur)) throw new Error("Not enough demo balance");
+  const findMatchCore = useCallback(
+    async (gameId: string, chargeEntry: boolean) => {
+      if (chargeEntry && !canAfford(profile.coins, wagerEur)) throw new Error("Not enough demo balance");
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
-      const withFee = { ...profile, coins: profile.coins - eurosToUnits(wagerEur) };
-      persistProfile(withFee);
+      if (chargeEntry) {
+        const withFee = { ...profile, coins: profile.coins - eurosToUnits(wagerEur) };
+        persistProfile(withFee);
+      }
       const match = await localMatchmaking.find({
         gameId,
         playerRating: profile.rating,
@@ -142,6 +146,8 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     },
     [persistProfile, profile, wagerEur],
   );
+
+  const findMatch = useCallback((gameId: string) => findMatchCore(gameId, true), [findMatchCore]);
 
   const startFriendMatch: DuelContextValue["startFriendMatch"] = useCallback((args) => {
     const match: ActiveMatch = { id: `friend-${args.code}`, gameId: args.gameId, seed: args.seed, startedAt: Date.now(), friend:{code:args.code,token:args.token,role:args.role}, opponent:{id:"friend",username:args.opponentName,avatar:args.opponentAvatar,rating:profile.rating,meanReactionMs:300,varianceMs:40} };
@@ -179,8 +185,8 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(settledKey,"1");
   },[profile.rating]);
 
-  const startLadder=useCallback(async(gameId:string)=>{const run:LadderRun={gameId,wagerEur,streak:0,active:true};writeLadder(run);setLadder(run);ladderRef.current=run;return findMatch(gameId)},[wagerEur,findMatch]);
-  const continueLadder=useCallback(async()=>{const run=ladderRef.current;if(!run?.active)throw new Error("No active ladder");return findMatch(run.gameId)},[findMatch]);
+  const startLadder=useCallback(async(gameId:string)=>{const run:LadderRun={gameId,wagerEur,streak:0,active:true};writeLadder(run);setLadder(run);ladderRef.current=run;return findMatchCore(gameId,true)},[wagerEur,findMatchCore]);
+  const continueLadder=useCallback(async()=>{const run=ladderRef.current;if(!run?.active)throw new Error("No active ladder");return findMatchCore(run.gameId,false)},[findMatchCore]);
   const cashOutLadder=useCallback(()=>{const run=ladderRef.current;if(!run?.active||run.streak<1)return;const prize=ladderPrizeUnits(run);setProfile(prev=>{const next={...prev,coins:prev.coins+prize};storage.write(STORAGE_KEYS.profile,next);return next});writeLadder(null);setLadder(null);ladderRef.current=null},[]);
 
   useEffect(()=>{if(!lastOutcome)return;const run=ladderRef.current;if(!run?.active||lastOutcome.gameId!==run.gameId)return;
@@ -192,13 +198,15 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     abortRef.current?.abort();
     abortRef.current = null;
     setActiveMatch((current) => {
-      // Refund the entry fee if the match never resolved.
-      outcome=tagLadderOutcome(outcome);
-      setProfile((prev) => {
+      // Refund only when an entry was actually charged. Ladder continuation rounds do not charge here.
+      const run = ladderRef.current;
+      const shouldRefund = !run?.active || run.streak === 0;
+      if (shouldRefund) setProfile((prev) => {
         const refunded = { ...prev, coins: prev.coins + eurosToUnits(wagerEur) };
         storage.write(STORAGE_KEYS.profile, refunded);
         return refunded;
       });
+      if (run?.active && run.streak === 0) { writeLadder(null); setLadder(null); ladderRef.current=null; }
       void current;
       return null;
     });
