@@ -53,7 +53,11 @@ function DirectionGame() {
     setPhase("over");
     setFlash("miss");
     sfx.miss();
-    if(activeMatch.friend){void submitIfFriend(activeMatch,count).then(()=>navigate({to:"/challenge/$code",params:{code:activeMatch.friend!.code}}));return;}const outcome = finishDirectionMatch({ playerArrows: count, opponentArrows: opponentOut });
+    const match = activeMatch;
+    if (!match) return;
+    const friend = match.friend;
+    if(friend){void submitIfFriend(match,count).then(()=>navigate({to:"/challenge/$code",params:{code:friend.code}}));return;}
+    const outcome = finishDirectionMatch({ playerArrows: count, opponentArrows: opponentOut });
     setTimeout(() => {
       if (outcome) {
         outcome.won ? sfx.win() : sfx.lose();

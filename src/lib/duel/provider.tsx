@@ -30,7 +30,7 @@ interface DuelContextValue {
   lastOutcome: MatchOutcome | null;
   muted: boolean;
   toggleMuted: () => void;
-  updateProfile: (patch: Partial<Pick<PlayerProfile, "username" | "avatar">>) => void;
+  updateProfile: (patch: Partial<Pick<PlayerProfile, "username" | "avatar" | "coins">>) => void;
   /** Takes the selected demo wager and finds an opponent. */
   findMatch: (gameId: string) => Promise<ActiveMatch>;
   startFriendMatch: (args:{gameId:string;seed:number;code:string;token:string;role:"creator"|"guest";opponentName:string;opponentAvatar:string}) => ActiveMatch;
@@ -139,7 +139,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       const match = await localMatchmaking.find({
         gameId,
         playerRating: profile.rating,
-        peakLeagueIndex: profile.peakLeagueIndex,
+        ...(profile.peakLeagueIndex != null ? { peakLeagueIndex: profile.peakLeagueIndex } : {}),
         signal: controller.signal,
       });
       setActiveMatch(match);

@@ -11,4 +11,6 @@ jobs:
         with:
           node-version: 22
       - run: npm install --ignore-scripts
+      # Vite/TanStack generates routeTree.gen.ts during build; typecheck the generated route graph afterwards.
       - run: npm run build
+      - run: npm run typecheck

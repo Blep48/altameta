@@ -6,6 +6,7 @@ import { MatchBalance } from "@/components/duel/MatchBalance";
 import { OpponentOutBanner } from "@/components/duel/OpponentOutBanner";
 import { sfx, startMusic } from "@/lib/duel/audio";
 import { createObstacleFeed, simulateSurvivalOpponent } from "@/lib/duel/engine/survival";
+import { ladderPrizeUnits } from "@/lib/duel/ladder";
 
 export const Route = createFileRoute("/play/flappy")({ component: Flappy });
 

@@ -37,15 +37,14 @@ function Result() {
     if (ready && !lastOutcome) navigate({ to: "/" });
   }, [ready, lastOutcome, navigate]);
 
-  if (!lastOutcome) return null;
-  const won = lastOutcome.won;
-  const rhythm = lastOutcome.rhythm;
-  const precision = lastOutcome.precision;
-  const direction = lastOutcome.direction;
-  const monkey = lastOutcome.monkey;
-  const survival = lastOutcome.survival;
-  const ladderMatch = lastOutcome.ladderStreak != null;
-  const ladderShownPrize = ladderMatch && won && ladder?.active && ladder.gameId===lastOutcome.gameId ? ladderPrizeUnits(ladder) : (lastOutcome.ladderPrizeUnits ?? 0);
+  const won = lastOutcome?.won ?? false;
+  const rhythm = lastOutcome?.rhythm;
+  const precision = lastOutcome?.precision;
+  const direction = lastOutcome?.direction;
+  const monkey = lastOutcome?.monkey;
+  const survival = lastOutcome?.survival;
+  const ladderMatch = lastOutcome?.ladderStreak != null;
+  const ladderShownPrize = lastOutcome && ladderMatch && won && ladder?.active && ladder.gameId===lastOutcome.gameId ? ladderPrizeUnits(ladder) : (lastOutcome?.ladderPrizeUnits ?? 0);
 
   useEffect(() => {
     if (!lastOutcome?.won) { setAnimatedWin(0); return; }
@@ -71,6 +70,8 @@ function Result() {
     const tick=(now:number)=>{const p=Math.min(1,(now-started)/1600);const eased=1-Math.pow(1-p,4);setAnimatedCashout(Math.round(cashout.amount*eased));if(p<1)frame=requestAnimationFrame(tick)};
     frame=requestAnimationFrame(tick);return()=>cancelAnimationFrame(frame);
   },[cashout]);
+
+  if (!lastOutcome) return null;
 
   if(cashout) {
     const checkpoints=Array.from({length:Math.min(cashout.streak,12)},(_,i)=>cashout.streak-Math.min(cashout.streak,12)+i+1);
@@ -231,7 +232,7 @@ function Result() {
             <p className="mt-2 font-display text-4xl font-black text-primary">{ladderMultiplier(ladder.streak).toFixed(1)}×</p>
             <p className="mt-1 text-xs text-muted-foreground">{ladderEliminations(ladder.streak)} players represented · DEMO prize {formatEuro(ladderPrizeUnits(ladder))}</p>
             <p className="mt-3 text-[11px] text-muted-foreground">Next win → {ladderMultiplier(ladder.streak+1).toFixed(1)}× · {formatEuro(Math.round(ladder.wagerEur*100*ladderMultiplier(ladder.streak+1)))}</p>
-            <button type="button" onClick={()=>navigate({to:"/match",search:{game:ladder.gameId,ladder:"continue"}})} className="mt-4 w-full rounded-2xl bg-primary py-4 font-display text-sm font-black tracking-[.16em] text-primary-foreground">CONTINUE · RISK THE RUN</button>
+            <button type="button" onClick={()=>navigate({to:"/match",search:{game:ladder.gameId,friend:"",ladder:"continue"}})} className="mt-4 w-full rounded-2xl bg-primary py-4 font-display text-sm font-black tracking-[.16em] text-primary-foreground">CONTINUE · RISK THE RUN</button>
             <button type="button" onClick={()=>{const amount=ladderPrizeUnits(ladder);const streak=ladder.streak;const eliminations=ladderEliminations(streak);cashOutLadder();setCashout({amount,streak,eliminations})}} className="mt-2 w-full rounded-2xl border border-primary py-4 font-display text-sm font-black tracking-[.16em] text-primary">CASH OUT · {formatEuro(ladderPrizeUnits(ladder))}</button>
           </> : <>
             <p className="font-display text-xl font-black text-destructive">LADDER RUN OVER</p>

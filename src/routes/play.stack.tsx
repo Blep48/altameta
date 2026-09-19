@@ -39,7 +39,7 @@ function Stack() {
     const tick=(t:number)=>{if(done.current)return;const dt=Math.min(1/30,(t-last.current)/1000);last.current=t;const speed=38+Math.min(82,scoreRef.current*3.6);let nx=x.current+dir.current*speed*dt;if(nx<=0){nx=0;dir.current=1}else if(nx+width.current>=100){nx=100-width.current;dir.current=-1}x.current=nx;
       const w=arena.clientWidth,h=arena.clientHeight,unit=w/100,bh=Math.max(13,Math.min(19,h*.032)),gap=2,visible=18;ctx.clearRect(0,0,w,h);
       const shown=blocks.current.slice(-visible);shown.forEach((b,i)=>{const yy=h-34-(i+1)*(bh+gap);ctx.globalAlpha=.55+i/shown.length*.35;ctx.fillStyle="#8b5cf6";ctx.fillRect(b.x*unit,yy,b.width*unit,bh)});
-      ctx.globalAlpha=1;ctx.fillStyle=perfect.current?"#f5c542":"#a78bfa";ctx.fillRect(x.current*unit,h-34-(shown.length+1)*(bh+gap),width.current*unit,bh);
+      ctx.globalAlpha=1;ctx.fillStyle=perfect?"#f5c542":"#a78bfa";ctx.fillRect(x.current*unit,h-34-(shown.length+1)*(bh+gap),width.current*unit,bh);
       raf.current=requestAnimationFrame(tick)};
     raf.current=requestAnimationFrame(tick);return()=>{ro.disconnect();if(raf.current)cancelAnimationFrame(raf.current)}
   },[activeMatch]);

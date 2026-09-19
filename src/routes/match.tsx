@@ -9,7 +9,7 @@ import { getFriendChallenge, getFriendSession } from "@/lib/duel/friend-challeng
 export const Route = createFileRoute("/match")({
   validateSearch: (search: Record<string, unknown>) => ({
     game: typeof search["game"] === "string" ? (search["game"] as string) : "reaction",
-    friend: search["friend"] === "1",
+    friend: search["friend"] === "1" ? "1" : "",
     ladder: search["ladder"] === "start" ? "start" : search["ladder"] === "continue" ? "continue" : "",
   }),
   head: () => ({
