@@ -18,7 +18,7 @@ import { scorePrecision, type PrecisionRun } from "./engine/precision";
 import { scoreDirection } from "./engine/direction";
 import { scoreMonkey } from "./engine/monkey";
 import { setMuted as setAudioMuted } from "./audio";
-import type { ActiveMatch, MatchOutcome, PlayerProfile, RoundResult } from "./types";
+import type { ActiveMatch, MatchMode, MatchOutcome, PlayerProfile, RoundResult } from "./types";
 import type { FriendChallenge } from "./friend-challenges";
 import { ladderPrizeUnits, readLadder, writeLadder, type LadderRun } from "./ladder";
 
@@ -123,11 +123,11 @@ export function DuelProvider({ children }: { children: ReactNode }) {
 
   const ladderRef=useRef<LadderRun|null>(null);
   useEffect(()=>{ladderRef.current=ladder},[ladder]);
-  const settlementForMode=useCallback((won:boolean,amount:number)=>ladderRef.current?.active?0:settlementAmount(won,amount),[]);
-  const tagLadderOutcome=useCallback((outcome:MatchOutcome)=>{const run=ladderRef.current;if(!run?.active||run.gameId!==outcome.gameId)return outcome;const streak=run.streak+(outcome.won?1:0);const next:LadderRun=outcome.won?{...run,streak}:{...run,active:false,lost:true};writeLadder(next);setLadder(next);ladderRef.current=next;return {...outcome,ladderStreak:streak,ladderPrizeUnits:outcome.won?ladderPrizeUnits(next):0}},[]);
+  const settlementForMode=useCallback((match:ActiveMatch,won:boolean,amount:number)=>match.mode==="ladder"?0:settlementAmount(won,amount),[]);
+  const tagLadderOutcome=useCallback((outcome:MatchOutcome,match:ActiveMatch)=>{const run=ladderRef.current;if(match.mode!=="ladder"||!run?.active||run.gameId!==outcome.gameId)return outcome;const streak=run.streak+(outcome.won?1:0);const next:LadderRun=outcome.won?{...run,streak}:{...run,active:false,lost:true};writeLadder(next);setLadder(next);ladderRef.current=next;return {...outcome,ladderStreak:streak,ladderPrizeUnits:outcome.won?ladderPrizeUnits(next):0}},[]);
 
   const findMatchCore = useCallback(
-    async (gameId: string, chargeEntry: boolean) => {
+    async (gameId: string, chargeEntry: boolean, mode: MatchMode) => {
       if (chargeEntry && !canAfford(profile.coins, wagerEur)) throw new Error("Not enough demo balance");
       abortRef.current?.abort();
       const controller = new AbortController();
@@ -142,16 +142,17 @@ export function DuelProvider({ children }: { children: ReactNode }) {
         ...(profile.peakLeagueIndex != null ? { peakLeagueIndex: profile.peakLeagueIndex } : {}),
         signal: controller.signal,
       });
-      setActiveMatch(match);
-      return match;
+      const typedMatch: ActiveMatch = { ...match, mode };
+      setActiveMatch(typedMatch);
+      return typedMatch;
     },
     [persistProfile, profile, wagerEur],
   );
 
-  const findMatch = useCallback((gameId: string) => findMatchCore(gameId, true), [findMatchCore]);
+  const findMatch = useCallback((gameId: string) => findMatchCore(gameId, true, "duel"), [findMatchCore]);
 
   const startFriendMatch: DuelContextValue["startFriendMatch"] = useCallback((args) => {
-    const match: ActiveMatch = { id: `friend-${args.code}`, gameId: args.gameId, seed: args.seed, startedAt: Date.now(), friend:{code:args.code,token:args.token,role:args.role}, opponent:{id:"friend",username:args.opponentName,avatar:args.opponentAvatar,rating:profile.rating,meanReactionMs:300,varianceMs:40} };
+    const match: ActiveMatch = { id: `friend-${args.code}`, gameId: args.gameId, mode:"friend", seed: args.seed, startedAt: Date.now(), friend:{code:args.code,token:args.token,role:args.role}, opponent:{id:"friend",username:args.opponentName,avatar:args.opponentAvatar,rating:profile.rating,meanReactionMs:300,varianceMs:40} };
     setActiveMatch(match); return match;
   }, [profile.rating]);
 
@@ -179,15 +180,15 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     const delta=tie?0:balanceDelta(won,ch.wager_eur);
     const opponentName=role==="creator"?(ch.guest_name||"FRIEND"):ch.creator_name;
     const opponentAvatar=role==="creator"?(ch.guest_avatar||"🎮"):ch.creator_avatar;
-    const outcome:MatchOutcome={id:`friend-${ch.code}-${role}`,gameId:ch.game_id,opponentName,opponentAvatar,opponentRating:profile.rating,playerAvgMs:mine,opponentAvgMs:theirs,playerBestMs:mine,falseStarts:0,won,tied:tie,friendChallengeCode:ch.code,coinDelta:delta,wagerEur:ch.wager_eur,ratingDelta:0,playedAt:new Date().toISOString(),rounds:[]};
+    const outcome:MatchOutcome={id:`friend-${ch.code}-${role}`,gameId:ch.game_id,mode:"friend",opponentName,opponentAvatar,opponentRating:profile.rating,playerAvgMs:mine,opponentAvgMs:theirs,playerBestMs:mine,falseStarts:0,won,tied:tie,friendChallengeCode:ch.code,coinDelta:delta,wagerEur:ch.wager_eur,ratingDelta:0,playedAt:new Date().toISOString(),rounds:[]};
     setProfile(prev=>{const next={...prev,coins:prev.coins+payout,gamesPlayed:prev.gamesPlayed+1,wins:prev.wins+(won?1:0),losses:prev.losses+(!won&&!tie?1:0)};storage.write(STORAGE_KEYS.profile,next);return next;});
     setHistory(prev=>{const next=[outcome,...prev.filter(x=>x.id!==outcome.id)].slice(0,50);storage.write(STORAGE_KEYS.history,next);return next;});
     setLastOutcome(outcome);
     localStorage.setItem(settledKey,"1");
   },[profile.rating]);
 
-  const startLadder=useCallback(async(gameId:string)=>{const run:LadderRun={gameId,wagerEur,streak:0,active:true};writeLadder(run);setLadder(run);ladderRef.current=run;return findMatchCore(gameId,true)},[wagerEur,findMatchCore]);
-  const continueLadder=useCallback(async()=>{const run=ladderRef.current;if(!run?.active)throw new Error("No active ladder");return findMatchCore(run.gameId,false)},[findMatchCore]);
+  const startLadder=useCallback(async(gameId:string)=>{const run:LadderRun={gameId,wagerEur,streak:0,active:true};writeLadder(run);setLadder(run);ladderRef.current=run;return findMatchCore(gameId,true,"ladder")},[wagerEur,findMatchCore]);
+  const continueLadder=useCallback(async()=>{const run=ladderRef.current;if(!run?.active)throw new Error("No active ladder");return findMatchCore(run.gameId,false,"ladder")},[findMatchCore]);
   const cashOutLadder=useCallback(()=>{const run=ladderRef.current;if(!run?.active||run.streak<1)return;const prize=ladderPrizeUnits(run);setProfile(prev=>{const next={...prev,coins:prev.coins+prize};storage.write(STORAGE_KEYS.profile,next);return next});writeLadder(null);setLadder(null);ladderRef.current=null},[]);
 
 
@@ -217,6 +218,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       let outcome: MatchOutcome = {
         id: activeMatch.id,
         gameId: activeMatch.gameId,
+        mode: activeMatch.mode,
         opponentName: activeMatch.opponent.username,
         opponentAvatar: activeMatch.opponent.avatar,
         opponentRating: activeMatch.opponent.rating,
@@ -232,12 +234,12 @@ export function DuelProvider({ children }: { children: ReactNode }) {
         rounds,
       };
 
-      outcome=tagLadderOutcome(outcome);
+      outcome=tagLadderOutcome(outcome,activeMatch);
       setProfile((prev) => {
         const next = applyMatchToProfile(prev, {
           won: outcome.won,
           ratingDelta: outcome.ratingDelta,
-          settlement: settlementForMode(outcome.won, wagerEur),
+          settlement: settlementForMode(activeMatch,outcome.won, wagerEur),
           bestRoundMs: score.cleanBestMs,
         });
         storage.write(STORAGE_KEYS.profile, next);
@@ -265,6 +267,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       let outcome: MatchOutcome = {
         id: activeMatch.id,
         gameId: activeMatch.gameId,
+        mode: activeMatch.mode,
         opponentName: activeMatch.opponent.username,
         opponentAvatar: activeMatch.opponent.avatar,
         opponentRating: activeMatch.opponent.rating,
@@ -286,12 +289,12 @@ export function DuelProvider({ children }: { children: ReactNode }) {
         },
       };
 
-      outcome=tagLadderOutcome(outcome);
+      outcome=tagLadderOutcome(outcome,activeMatch);
       setProfile((prev) => {
         const next = applyMatchToProfile(prev, {
           won: outcome.won,
           ratingDelta: outcome.ratingDelta,
-          settlement: settlementForMode(outcome.won, wagerEur),
+          settlement: settlementForMode(activeMatch,outcome.won, wagerEur),
           bestRoundMs: null,
         });
         storage.write(STORAGE_KEYS.profile, next);
@@ -319,6 +322,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       let outcome: MatchOutcome = {
         id: activeMatch.id,
         gameId: activeMatch.gameId,
+        mode: activeMatch.mode,
         opponentName: activeMatch.opponent.username,
         opponentAvatar: activeMatch.opponent.avatar,
         opponentRating: activeMatch.opponent.rating,
@@ -342,12 +346,12 @@ export function DuelProvider({ children }: { children: ReactNode }) {
         },
       };
 
-      outcome=tagLadderOutcome(outcome);
+      outcome=tagLadderOutcome(outcome,activeMatch);
       setProfile((prev) => {
         const next = applyMatchToProfile(prev, {
           won: outcome.won,
           ratingDelta: outcome.ratingDelta,
-          settlement: settlementForMode(outcome.won, wagerEur),
+          settlement: settlementForMode(activeMatch,outcome.won, wagerEur),
           bestRoundMs: null,
         });
         storage.write(STORAGE_KEYS.profile, next);
@@ -375,6 +379,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       let outcome: MatchOutcome = {
         id: activeMatch.id,
         gameId: activeMatch.gameId,
+        mode: activeMatch.mode,
         opponentName: activeMatch.opponent.username,
         opponentAvatar: activeMatch.opponent.avatar,
         opponentRating: activeMatch.opponent.rating,
@@ -390,9 +395,9 @@ export function DuelProvider({ children }: { children: ReactNode }) {
         rounds: [],
         direction: { seed: activeMatch.seed, playerArrows: score.playerArrows, opponentArrows: score.opponentArrows },
       };
-      outcome=tagLadderOutcome(outcome);
+      outcome=tagLadderOutcome(outcome,activeMatch);
       setProfile((prev) => {
-        const next = applyMatchToProfile(prev, { won: outcome.won, ratingDelta: outcome.ratingDelta, settlement: settlementForMode(outcome.won, wagerEur), bestRoundMs: null });
+        const next = applyMatchToProfile(prev, { won: outcome.won, ratingDelta: outcome.ratingDelta, settlement: settlementForMode(activeMatch,outcome.won, wagerEur), bestRoundMs: null });
         storage.write(STORAGE_KEYS.profile, next);
         return next;
       });
@@ -415,6 +420,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       saveHighscore("memory", score.playerLevels);
       let outcome: MatchOutcome = {
         id: activeMatch.id, gameId: activeMatch.gameId,
+        mode: activeMatch.mode,
         opponentName: activeMatch.opponent.username, opponentAvatar: activeMatch.opponent.avatar,
         opponentRating: activeMatch.opponent.rating, playerAvgMs: score.playerLevels,
         opponentAvgMs: score.opponentLevels, playerBestMs: score.playerLevels, falseStarts: 0,
@@ -422,7 +428,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
         ratingDelta: ratingDeltaFor(score.won), playedAt: new Date().toISOString(), rounds: [],
         monkey: { seed: activeMatch.seed, playerLevels: score.playerLevels, opponentLevels: score.opponentLevels },
       };
-      outcome=tagLadderOutcome(outcome);
+      outcome=tagLadderOutcome(outcome,activeMatch);
       setProfile(prev => {
         const next = applyMatchToProfile(prev,{won:outcome.won,ratingDelta:outcome.ratingDelta,settlement:settlementForMode(outcome.won,wagerEur),bestRoundMs:null});
         storage.write(STORAGE_KEYS.profile,next); return next;
@@ -439,6 +445,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       saveHighscore(activeMatch.gameId, playerScore);
       let outcome: MatchOutcome = {
         id: activeMatch.id, gameId: activeMatch.gameId,
+        mode: activeMatch.mode,
         opponentName: activeMatch.opponent.username, opponentAvatar: activeMatch.opponent.avatar,
         opponentRating: activeMatch.opponent.rating, playerAvgMs: playerScore,
         opponentAvgMs: opponentScore, playerBestMs: playerScore, falseStarts: 0,
@@ -446,9 +453,9 @@ export function DuelProvider({ children }: { children: ReactNode }) {
         ratingDelta: ratingDeltaFor(won), playedAt: new Date().toISOString(), rounds: [],
         survival: { seed: activeMatch.seed, playerScore, opponentScore },
       };
-      outcome=tagLadderOutcome(outcome);
+      outcome=tagLadderOutcome(outcome,activeMatch);
       setProfile(prev => {
-        const next = applyMatchToProfile(prev,{won,ratingDelta:outcome.ratingDelta,settlement:settlementForMode(won,wagerEur),bestRoundMs:null});
+        const next = applyMatchToProfile(prev,{won,ratingDelta:outcome.ratingDelta,settlement:settlementForMode(activeMatch,won,wagerEur),bestRoundMs:null});
         storage.write(STORAGE_KEYS.profile,next); return next;
       });
       setHistory(prev => { const next=[outcome,...prev].slice(0,50);storage.write(STORAGE_KEYS.history,next);return next;});
