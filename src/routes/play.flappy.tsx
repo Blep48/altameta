@@ -22,7 +22,7 @@ function Flappy() {
   const bot = useMemo(() => activeMatch ? simulateSurvivalOpponent(seed, activeMatch.opponent, "flappy") : 0, [seed, activeMatch]);
 
   useEffect(() => startMusic("flappy"), []);
-  useEffect(() => { if (ready && !activeMatch) nav({ to: "/" }); }, [ready, activeMatch, nav]);
+  useEffect(() => { if (ready && !activeMatch && !done.current) nav({ to: "/" }); }, [ready, activeMatch, nav]);
 
   const end = () => {
     if (done.current || !activeMatch) return;

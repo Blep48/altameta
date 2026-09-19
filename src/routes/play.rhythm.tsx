@@ -59,7 +59,7 @@ function RhythmGame() {
   const raf = useRef<number | null>(null);
 
   useEffect(() => {
-    if (ready && !activeMatch) navigate({ to: "/" });
+    if (ready && !activeMatch && !finished.current) navigate({ to: "/" });
   }, [ready, activeMatch, navigate]);
 
   const end = (playerNotes: number) => {

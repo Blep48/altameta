@@ -21,6 +21,8 @@ function Result() {
   const { lastOutcome, profile, ready, canPlay, ladder, cashOutLadder } = useDuel();
   const navigate = useNavigate();
   const [animatedWin, setAnimatedWin] = useState(0);
+  const [cashout, setCashout] = useState<{amount:number;streak:number;eliminations:number}|null>(null);
+  const [animatedCashout, setAnimatedCashout] = useState(0);
 
   useEffect(() => {
     if (ready && !lastOutcome) navigate({ to: "/" });
@@ -38,11 +40,11 @@ function Result() {
 
   useEffect(() => {
     if (!lastOutcome?.won) { setAnimatedWin(0); return; }
-    const target = Math.max(0, lastOutcome.coinDelta);
+    const target = Math.max(0, lastOutcome.ladderPrizeUnits ?? lastOutcome.coinDelta);
     const started = performance.now();
     let frame = 0;
     const tick = (now: number) => {
-      const progress = Math.min(1, (now - started) / 500);
+      const progress = Math.min(1, (now - started) / Math.min(1800, Math.max(850, 700 + Math.log10(Math.max(10,target))*260)));
       const eased = 1 - Math.pow(1 - progress, 3);
       setAnimatedWin(Math.round(target * eased));
       if (progress < 1) frame = requestAnimationFrame(tick);
@@ -50,6 +52,23 @@ function Result() {
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [lastOutcome]);
+
+  useEffect(() => {
+    if (!cashout) return;
+    const started=performance.now(); let frame=0;
+    const tick=(now:number)=>{const p=Math.min(1,(now-started)/1600);const eased=1-Math.pow(1-p,4);setAnimatedCashout(Math.round(cashout.amount*eased));if(p<1)frame=requestAnimationFrame(tick)};
+    frame=requestAnimationFrame(tick);return()=>cancelAnimationFrame(frame);
+  },[cashout]);
+
+  if(cashout) return <Screen className="justify-center">
+    <div className="animate-pop rounded-[2rem] border border-primary bg-primary/10 px-5 py-10 text-center neon-glow">
+      <p className="text-[11px] font-black uppercase tracking-[.32em] text-primary">∞ LADDER CASH OUT</p>
+      <p className="mt-5 text-xs uppercase tracking-[.2em] text-muted-foreground">{cashout.streak} win{cashout.streak===1?"":"s"} · {cashout.eliminations} players represented</p>
+      <p className="mt-4 font-display text-6xl font-black tabular-nums text-primary text-glow">{formatEuro(animatedCashout)}</p>
+      <p className="mt-3 text-xs text-muted-foreground">DEMO BALANCE SECURED</p>
+    </div>
+    <button type="button" onClick={()=>navigate({to:"/"})} className="mt-8 w-full rounded-2xl bg-primary py-5 font-display text-lg font-black tracking-[.22em] text-primary-foreground">BACK TO HOME</button>
+  </Screen>;
 
   return (
     <Screen>
@@ -72,8 +91,8 @@ function Result() {
 
       <div className="mt-5 text-center">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{ladderMatch ? (won ? `Ladder cash out · ${lastOutcome.ladderStreak} win${lastOutcome.ladderStreak===1?"":"s"}` : "Ladder run lost") : won ? "Winnings" : "Lost"}</p>
-        <p className={`mt-1 font-display text-5xl font-black tabular-nums ${won ? "text-primary text-glow" : "text-destructive"}`}>
-          {ladderMatch ? (won ? formatEuro(ladderShownPrize) : formatEuro(-lastOutcome.wagerEur*100, true)) : won ? formatEuro(animatedWin, true) : formatEuro(lastOutcome.coinDelta, true)}
+        <p className={`mt-2 font-display text-6xl font-black tabular-nums transition-transform ${won ? "text-primary text-glow" : "text-destructive"}`}>
+          {ladderMatch ? (won ? formatEuro(animatedWin) : formatEuro(-lastOutcome.wagerEur*100, true)) : won ? formatEuro(animatedWin, true) : formatEuro(lastOutcome.coinDelta, true)}
         </p>
       </div>
 
@@ -189,7 +208,7 @@ function Result() {
             <p className="mt-1 text-xs text-muted-foreground">{ladderEliminations(ladder.streak)} players represented · DEMO prize {formatEuro(ladderPrizeUnits(ladder))}</p>
             <p className="mt-3 text-[11px] text-muted-foreground">Next win → {ladderMultiplier(ladder.streak+1).toFixed(1)}× · {formatEuro(Math.round(ladder.wagerEur*100*ladderMultiplier(ladder.streak+1)))}</p>
             <button type="button" onClick={()=>navigate({to:"/match",search:{game:ladder.gameId,ladder:"continue"}})} className="mt-4 w-full rounded-2xl bg-primary py-4 font-display text-sm font-black tracking-[.16em] text-primary-foreground">CONTINUE · RISK THE RUN</button>
-            <button type="button" onClick={()=>{cashOutLadder();navigate({to:"/"})}} className="mt-2 w-full rounded-2xl border border-primary py-4 font-display text-sm font-black tracking-[.16em] text-primary">CASH OUT · {formatEuro(ladderPrizeUnits(ladder))}</button>
+            <button type="button" onClick={()=>{const amount=ladderPrizeUnits(ladder);const streak=ladder.streak;const eliminations=ladderEliminations(streak);cashOutLadder();setCashout({amount,streak,eliminations})}} className="mt-2 w-full rounded-2xl border border-primary py-4 font-display text-sm font-black tracking-[.16em] text-primary">CASH OUT · {formatEuro(ladderPrizeUnits(ladder))}</button>
           </> : <>
             <p className="font-display text-xl font-black text-destructive">LADDER RUN OVER</p>
             <p className="mt-2 text-xs text-muted-foreground">The accumulated DEMO prize was lost.</p>

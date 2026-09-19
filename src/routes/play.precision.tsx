@@ -71,7 +71,7 @@ function PrecisionGame() {
   );
 
   useEffect(() => {
-    if (ready && !activeMatch) navigate({ to: "/" });
+    if (ready && !activeMatch && !finished.current) navigate({ to: "/" });
   }, [ready, activeMatch, navigate]);
 
   const end = () => {
