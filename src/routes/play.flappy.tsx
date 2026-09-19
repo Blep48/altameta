@@ -11,7 +11,7 @@ export const Route = createFileRoute("/play/flappy")({ component: Flappy });
 
 function Flappy() {
   const nav = useNavigate();
-  const { activeMatch, finishSurvivalMatch, ready, profile, wagerEur } = useDuel();
+  const { activeMatch, finishSurvivalMatch, ready, profile, wagerEur, ladder } = useDuel();
   const [score, setScore] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const arenaRef = useRef<HTMLElement | null>(null);
@@ -125,7 +125,7 @@ function Flappy() {
     <MatchBalance coins={profile.coins} wagerEur={wagerEur} />
     <div className="flex justify-between px-5 py-2 text-xs"><b>FLAPPY · {score}</b><span className="text-muted-foreground">vs {activeMatch.opponent.username}</span></div>
     <section ref={arenaRef} className="relative min-h-0 flex-1 overflow-hidden border-y border-border bg-card">
-      <OpponentOutBanner opponentName={activeMatch.opponent.username} opponentScore={bot} playerScore={score} wagerEur={wagerEur} outAfterMs={Math.max(1500, bot * 1450)} label="pipes" />
+      <OpponentOutBanner opponentName={activeMatch.opponent.username} opponentScore={bot} playerScore={score} wagerEur={wagerEur} securedEur={ladder?.active && ladder.gameId==="flappy" ? ladderPrizeUnits({...ladder,streak:ladder.streak+1})/100 : undefined} outAfterMs={Math.max(1500, bot * 1450)} label="pipes" />
       <canvas ref={canvasRef} className="pointer-events-none absolute inset-0" />
       <p className="pointer-events-none absolute bottom-4 inset-x-0 text-center text-xs text-muted-foreground">TAP TO FLAP</p>
     </section>

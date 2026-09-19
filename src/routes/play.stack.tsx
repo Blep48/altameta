@@ -6,6 +6,7 @@ import { MatchBalance } from "@/components/duel/MatchBalance";
 import { OpponentOutBanner } from "@/components/duel/OpponentOutBanner";
 import { sfx, startMusic } from "@/lib/duel/audio";
 import { simulateStackOpponent } from "@/lib/duel/engine/casual";
+import { ladderPrizeUnits } from "@/lib/duel/ladder";
 
 export const Route = createFileRoute("/play/stack")({ component: Stack });
 type Block = { x: number; width: number };
@@ -13,7 +14,7 @@ type Block = { x: number; width: number };
 function Stack() {
   useEffect(() => startMusic("stack"), []);
   const nav = useNavigate();
-  const { activeMatch, finishSurvivalMatch, ready, profile, wagerEur } = useDuel();
+  const { activeMatch, finishSurvivalMatch, ready, profile, wagerEur, ladder } = useDuel();
   const [score, setScore] = useState(0), [over, setOver] = useState(false), [perfect, setPerfect] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement|null>(null), arenaRef = useRef<HTMLElement|null>(null);
   const x = useRef(14), dir = useRef(1), width = useRef(72), baseX = useRef(14), scoreRef = useRef(0);
@@ -61,7 +62,7 @@ function Stack() {
   return <main className="mx-auto flex h-[100dvh] w-full max-w-md touch-none select-none flex-col overflow-hidden bg-background">
     <MatchBalance coins={profile.coins} wagerEur={wagerEur}/><div className="flex justify-between px-5 py-2 text-xs"><b>STACK · {score}</b><span>vs {activeMatch.opponent.username}</span></div>
     <section ref={arenaRef} onPointerDown={drop} className="relative min-h-0 flex-1 overflow-hidden bg-card">
-      <OpponentOutBanner opponentName={activeMatch.opponent.username} opponentScore={bot} playerScore={score} wagerEur={wagerEur} outAfterMs={Math.max(1600,bot*720)} label="blocks"/>
+      <OpponentOutBanner opponentName={activeMatch.opponent.username} opponentScore={bot} playerScore={score} wagerEur={wagerEur} securedEur={ladder?.active && ladder.gameId==="stack" ? ladderPrizeUnits({...ladder,streak:ladder.streak+1})/100 : undefined} outAfterMs={Math.max(1600,bot*720)} label="blocks"/>
       <canvas ref={canvasRef} className="pointer-events-none absolute inset-0"/>
       <p className="pointer-events-none absolute bottom-2 inset-x-0 text-center text-xs text-muted-foreground">{over?"MISSED":perfect?"PERFECT":"TAP TO DROP · PERFECT DROPS SNAP INTO PLACE"}</p>
     </section>
