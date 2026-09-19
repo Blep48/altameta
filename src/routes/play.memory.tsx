@@ -23,7 +23,7 @@ function MonkeyTest() {
   const board = useMemo(() => createMonkeyBoard(seed, level), [seed, level]);
   const opponentLevels = useMemo(() => activeMatch ? simulateMonkeyOpponent(seed, activeMatch.opponent) : 0, [seed, activeMatch]);
 
-  useEffect(() => { if (ready && !activeMatch) navigate({to:"/"}); }, [ready, activeMatch, navigate]);
+  useEffect(() => { if (ready && !activeMatch && !finished.current) navigate({to:"/"}); }, [ready, activeMatch, navigate]);
   useEffect(() => {
     if (!activeMatch || phase === "over") return;
     setCovered(false); setNext(1); setHighlighted(null); setPhase("preview");
