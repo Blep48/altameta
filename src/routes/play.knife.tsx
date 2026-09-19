@@ -46,7 +46,7 @@ function Knife(){
   return <main className="mx-auto flex h-[100dvh] w-full max-w-md touch-none select-none flex-col overflow-hidden bg-background">
     <MatchBalance coins={profile.coins} wagerEur={wagerEur}/><div className="flex justify-between px-5 py-2 text-xs"><b>KNIFE IT · {score}</b><span>vs {activeMatch.opponent.username}</span></div>
     <section ref={arenaRef} onPointerDown={throwKnife} className="relative min-h-0 flex-1 overflow-hidden bg-card">
-      <OpponentOutBanner opponentName={activeMatch.opponent.username} opponentScore={bot} playerScore={score} wagerEur={wagerEur} securedEur={ladder?.active && ladder.gameId==="knife" ? ladderPrizeUnits({...ladder,streak:ladder.streak+1})/100 : undefined} outAfterMs={Math.max(1600,bot*620)} label="knives"/>
+      <OpponentOutBanner opponentName={activeMatch.opponent.username} opponentScore={bot} playerScore={score} wagerEur={wagerEur} securedEur={ladder?.active && ladder.gameId==="knife" ? ladderPrizeUnits(ladder)/100 : undefined} outAfterMs={Math.max(1600,bot*620)} label="knives"/>
       <canvas ref={canvasRef} className="pointer-events-none absolute inset-0"/>
       <p className="pointer-events-none absolute bottom-3 inset-x-0 text-center text-[10px] text-muted-foreground">{over?"CLANG · HIT A KNIFE":"TAP ANYWHERE TO THROW"}</p>
     </section>
