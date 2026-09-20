@@ -7,6 +7,7 @@ import { OpponentOutBanner } from "@/components/duel/OpponentOutBanner";
 import { sfx, startMusic } from "@/lib/duel/audio";
 import { createObstacleFeed, simulateSurvivalOpponent } from "@/lib/duel/engine/survival";
 import { ladderPrizeUnits } from "@/lib/duel/ladder";
+import { setupCanvasArena } from "@/lib/duel/canvas";
 
 export const Route = createFileRoute("/play/flappy")({ component: Flappy });
 
@@ -51,18 +52,8 @@ function Flappy() {
     const ctx = canvas.getContext("2d", { alpha: true });
     if (!ctx) return;
 
-    const resize = () => {
-      const rect = arena.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.max(1, Math.round(rect.width * dpr));
-      canvas.height = Math.max(1, Math.round(rect.height * dpr));
-      canvas.style.width = rect.width + "px";
-      canvas.style.height = rect.height + "px";
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-    resize();
-    const observer = new ResizeObserver(resize);
-    observer.observe(arena);
+    const { size, disconnect } = setupCanvasArena(canvas, arena, ctx);
+    const primary = getComputedStyle(arena).getPropertyValue("--primary").trim() || "#7c3aed";
 
     last.current = performance.now();
     const tick = (now: number) => {
@@ -90,7 +81,7 @@ function Flappy() {
       }
       if (y.current < 2 || y.current > 96) { end(); return; }
 
-      const w = arena.clientWidth, h = arena.clientHeight;
+      const { width: w, height: h } = size;
       ctx.clearRect(0, 0, w, h);
       const birdX = w * 0.24, birdY = h * y.current / 100;
       ctx.save();
@@ -101,7 +92,7 @@ function Flappy() {
       ctx.fillStyle = "#f08a24"; ctx.beginPath(); ctx.moveTo(11, 0); ctx.lineTo(20, 4); ctx.lineTo(11, 7); ctx.fill();
       ctx.restore();
 
-      ctx.fillStyle = getComputedStyle(arena).getPropertyValue("--primary").trim() || "#7c3aed";
+      ctx.fillStyle = primary;
       for (const obstacle of feed) {
         const xp = obstacle.x - scroll.current;
         if (xp < -15 || xp > 120) continue;
@@ -116,7 +107,7 @@ function Flappy() {
       raf.current = requestAnimationFrame(tick);
     };
     raf.current = requestAnimationFrame(tick);
-    return () => { observer.disconnect(); if (raf.current) cancelAnimationFrame(raf.current); };
+    return () => { disconnect(); if (raf.current) cancelAnimationFrame(raf.current); };
   }, [activeMatch, feed]);
 
   if (!activeMatch) return null;
