@@ -430,7 +430,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
       };
       outcome=tagLadderOutcome(outcome,activeMatch);
       setProfile(prev => {
-        const next = applyMatchToProfile(prev,{won:outcome.won,ratingDelta:outcome.ratingDelta,settlement:settlementForMode(outcome.won,wagerEur),bestRoundMs:null});
+        const next = applyMatchToProfile(prev,{won:outcome.won,ratingDelta:outcome.ratingDelta,settlement:settlementForMode(activeMatch,outcome.won,wagerEur),bestRoundMs:null});
         storage.write(STORAGE_KEYS.profile,next); return next;
       });
       setHistory(prev => { const next=[outcome,...prev].slice(0,50);storage.write(STORAGE_KEYS.history,next);return next;});
