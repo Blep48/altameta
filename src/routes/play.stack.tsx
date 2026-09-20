@@ -35,8 +35,7 @@ function Stack() {
 
   useEffect(()=>{
     if(!activeMatch)return; const canvas=canvasRef.current,arena=arenaRef.current;if(!canvas||!arena)return;const ctx=canvas.getContext("2d");if(!ctx)return;
-    const resize=()=>{const r=arena.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(r.width*d);canvas.height=Math.round(r.height*d);canvas.style.width=r.width+"px";canvas.style.height=r.height+"px";ctx.setTransform(d,0,0,d,0,0)};
-    resize();const ro=new ResizeObserver(resize);ro.observe(arena);last.current=performance.now();
+    const {size,disconnect}=setupCanvasArena(canvas,arena,ctx);last.current=performance.now();
     const tick=(t:number)=>{if(done.current)return;const dt=Math.min(1/30,(t-last.current)/1000);last.current=t;const speed=38+Math.min(82,scoreRef.current*3.6);let nx=x.current+dir.current*speed*dt;if(nx<=0){nx=0;dir.current=1}else if(nx+width.current>=100){nx=100-width.current;dir.current=-1}x.current=nx;
       const w=size.width,h=size.height,unit=w/100,bh=Math.max(13,Math.min(19,h*.032)),gap=2,visible=18;ctx.clearRect(0,0,w,h);
       const shown=blocks.current.slice(-visible);shown.forEach((b,i)=>{const yy=h-34-(i+1)*(bh+gap);ctx.globalAlpha=.55+i/shown.length*.35;ctx.fillStyle="#8b5cf6";ctx.fillRect(b.x*unit,yy,b.width*unit,bh)});
