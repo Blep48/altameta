@@ -75,21 +75,21 @@ function DinoRun() {
       if (done.current) return;
       const dt = Math.min(1 / 30, (now - last.current) / 1000);
       last.current = now;
-      vel.current -= 430 * dt;
+      vel.current -= 460 * dt;
       h.current = Math.max(0, h.current + vel.current * dt);
       if (h.current === 0) vel.current = 0;
       scr.current += (78 + Math.min(44, sc.current * 0.48)) * dt;
       let passed = 0;
       for (const o of feed) {
         const x = o.x - scr.current;
-        const obstacleW = Math.max(5, o.size * 0.45),
-          halfPlayer = (14 / size.width) * 100;
+        const obstacleW = Math.max(4, o.size * 0.36),
+          halfPlayer = (9 / size.width) * 100;
         if (x + obstacleW < 22 - halfPlayer) passed++;
         const obstacleH = Math.min(26, 22 + o.size * 0.18);
         if (
           x < 22 + halfPlayer &&
           x + obstacleW > 22 - halfPlayer &&
-          h.current < obstacleH
+          h.current + 5 < obstacleH
         ) {
           end();
           return;
@@ -109,8 +109,20 @@ function DinoRun() {
       ctx.clearRect(0, 0, w, hh);
       ctx.fillStyle = "#888";
       ctx.fillRect(0, ground, w, 3);
+      // Tiny pixel T-Rex, kept visually larger than its forgiving hitbox.
+      const dx = w * 0.22 - 14;
+      const dy = ground - h.current - 28;
       ctx.fillStyle = "#eee";
-      ctx.fillRect(w * 0.22 - 14, ground - h.current - 28, 28, 28);
+      ctx.fillRect(dx + 10, dy + 2, 14, 5);   // head
+      ctx.fillRect(dx + 10, dy + 7, 18, 5);   // snout
+      ctx.fillRect(dx + 7, dy + 8, 12, 12);   // torso
+      ctx.fillRect(dx + 3, dy + 12, 7, 5);    // tail base
+      ctx.fillRect(dx, dy + 10, 6, 4);         // tail
+      ctx.fillRect(dx + 8, dy + 19, 4, 7);     // rear leg
+      ctx.fillRect(dx + 15, dy + 19, 4, 7);    // front leg
+      ctx.fillRect(dx + 18, dy + 13, 5, 3);    // tiny arm
+      ctx.fillStyle = "#111";
+      ctx.fillRect(dx + 20, dy + 4, 2, 2);     // eye
       ctx.fillStyle = "#777";
       for (const o of feed) {
         const xp = o.x - scr.current;
@@ -130,7 +142,7 @@ function DinoRun() {
   if (!activeMatch) return null;
   const leap = () => {
     if (!done.current && h.current <= 1) {
-      vel.current = 168;
+      vel.current = 205;
       sfx.tap();
     }
   };
