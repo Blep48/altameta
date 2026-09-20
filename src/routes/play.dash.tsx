@@ -75,7 +75,7 @@ function DinoRun() {
       if (done.current) return;
       const dt = Math.min(1 / 30, (now - last.current) / 1000);
       last.current = now;
-      vel.current -= 164 * dt;
+      vel.current -= 430 * dt;
       h.current = Math.max(0, h.current + vel.current * dt);
       if (h.current === 0) vel.current = 0;
       scr.current += (78 + Math.min(44, sc.current * 0.48)) * dt;
@@ -130,13 +130,13 @@ function DinoRun() {
   if (!activeMatch) return null;
   const leap = () => {
     if (!done.current && h.current <= 1) {
-      vel.current = 104;
+      vel.current = 168;
       sfx.tap();
     }
   };
   const fall = () => {
     if (!done.current && h.current > 1) {
-      vel.current = Math.min(vel.current, -176);
+      vel.current = Math.min(vel.current, -280);
       sfx.tap();
     }
   };
