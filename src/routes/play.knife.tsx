@@ -28,8 +28,7 @@ function Knife(){
 
   useEffect(()=>{
     if(!activeMatch)return;const canvas=canvasRef.current,arena=arenaRef.current;if(!canvas||!arena)return;const ctx=canvas.getContext("2d");if(!ctx)return;
-    const resize=()=>{const r=arena.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(r.width*d);canvas.height=Math.round(r.height*d);canvas.style.width=r.width+"px";canvas.style.height=r.height+"px";ctx.setTransform(d,0,0,d,0,0)};
-    resize();const ro=new ResizeObserver(resize);ro.observe(arena);last.current=performance.now();
+    const {size,disconnect}=setupCanvasArena(canvas,arena,ctx);last.current=performance.now();
     const tick=(t:number)=>{if(done.current)return;const dt=Math.min(1/30,(t-last.current)/1000);last.current=t;angle.current=(angle.current+(105+Math.min(220,scoreRef.current*7))*dt)%360;
       if(projectile.current!==null){projectile.current=Math.min(1,projectile.current+dt*7.5);if(projectile.current>=1){const hit=queuedHit.current!;if(knives.current.some(a=>angularDistance(a,hit)<14)){finish();return}knives.current.push(hit);scoreRef.current++;setScore(scoreRef.current);sfx.tap();projectile.current=null;queuedHit.current=null}}
       const w=size.width,h=size.height,cx=w/2,cy=Math.max(125,h*.36),r=Math.min(82,w*.22);ctx.clearRect(0,0,w,h);
