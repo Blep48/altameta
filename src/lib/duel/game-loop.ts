@@ -15,7 +15,7 @@ export function startGameLoop(frame: FrameCallback, maxDeltaSeconds = 1 / 30) {
     const dt = Math.min(maxDeltaSeconds, Math.max(0, (now - previous) / 1000));
     previous = now;
     frame(dt, now);
-    raf = requestAnimationFrame(tick);
+    if (running) raf = requestAnimationFrame(tick);
   };
 
   raf = requestAnimationFrame(tick);

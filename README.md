@@ -5,7 +5,7 @@ Create the initial mobile-first prototype for "DUEL", a competitive 1v1 arcade m
 1. Core Concept & Economy:
 - Virtual demo currency only ("Duel Coins"), no real money or gambling.
 - Default starter balance: 10,000 Duel Coins.
-- Entry fee per match: 100 Duel Coins. Win reward: +190 Duel Coins; loss: -100 Duel Coins.
+- Entry fee per match: 100 Duel Coins. Total winner return: 190 Duel Coins (net +90); loss: -100 Duel Coins. Commission is 5% of the combined stakes.
 - Persistent local/database storage for player profile, rating (Elo/MMR style), match history, and coin balance.
 
 2. Design & UX:
@@ -25,7 +25,7 @@ Create the initial mobile-first prototype for "DUEL", a competitive 1v1 arcade m
   * Simulated opponent generates realistic reaction times per round.
 - MATCH RESULT:
   * Dramatic comparison: You (e.g. 195 ms avg) vs Opponent (e.g. 215 ms avg).
-  * Clear WIN / DEFEAT banner, +190 or -100 Duel Coins, rating delta (+/- 15 pts).
+  * Clear WIN / DEFEAT banner, 190 Duel Coins total return (+90 net) or -100 Duel Coins, rating delta (+/- 15 pts).
   * "REMATCH" (loops directly back into matchmaking) and "BACK TO HOME".
 - PROFILE: Username, avatar picker, rating, games played, wins, losses, win rate, best reaction record, coin balance.
 - LEADERBOARD: Global leaderboard with at least 20 seeded players, highlighting the current player.
@@ -54,5 +54,19 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## Reliability checks
+
+Run `npm ci`, `npm test`, `npm run build`, then `npm run typecheck` (build generates the route types). The pull-request workflow runs the same checks.
+
+- Duel and demo Friend Challenge winners receive 95% of the two-player pool, including their own entry. A €1 entry returns €1.90, a net gain of €0.90.
+- Ladder cash-out is `entry × 2^wins × 0.95`; continuation rounds do not charge another entry.
+- IN PERSON results update history/stats without changing demo balance.
+- Balance, reservations, Ladder and completed results share one persisted account snapshot. Existing profiles/history migrate on first load. Reset clears the account and friend sessions.
+- Each friend challenge has its own saved session. Failed score uploads remain on the device; open the challenge and retry the original score.
+- Dino Run and Flappy finish when all 240 seeded obstacles are cleared.
+- Git-triggered Vercel deployments are temporarily disabled by `git.deploymentEnabled: false` in `vercel.json`. Remove that setting when automatic deployment should resume; local builds and GitHub checks remain available.
+
+The friend-challenge Edge Function is hosted separately from this repository. Automated tests mock its network boundary and do not write test games to the production database.
 
 <!-- production redeploy trigger: 2026-09-19 -->

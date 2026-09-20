@@ -1,83 +1,169 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Screen } from "@/components/duel/Screen";
 import { useDuel } from "@/lib/duel/provider";
 import { resetGameTrack, sfx, startMusic } from "@/lib/duel/audio";
+import { getPendingScore } from "@/lib/duel/pending-score";
 import type { ActiveMatch } from "@/lib/duel/types";
-import { getFriendChallenge, getFriendSession } from "@/lib/duel/friend-challenges";
+import {
+  getFriendChallenge,
+  getFriendSession,
+} from "@/lib/duel/friend-challenges";
 
 export const Route = createFileRoute("/match")({
   validateSearch: (search: Record<string, unknown>) => ({
-    game: typeof search["game"] === "string" ? (search["game"] as string) : "reaction",
-    friend: search["friend"] === "1" ? "1" : "",
-    ladder: search["ladder"] === "start" ? "start" : search["ladder"] === "continue" ? "continue" : "",
+    game:
+      typeof search["game"] === "string"
+        ? (search["game"] as string)
+        : "reaction",
+    friend: typeof search["friend"] === "string" ? search["friend"] : "",
+    ladder:
+      search["ladder"] === "start"
+        ? "start"
+        : search["ladder"] === "continue"
+          ? "continue"
+          : "",
   }),
   head: () => ({
     meta: [
       { title: "Searching for an opponent — DUEL" },
-      { name: "description", content: "Matchmaking in progress. Finding a DUEL opponent near your rating." },
+      {
+        name: "description",
+        content:
+          "Matchmaking in progress. Finding a DUEL opponent near your rating.",
+      },
       { property: "og:title", content: "Searching for an opponent — DUEL" },
-      { property: "og:description", content: "Finding a DUEL opponent near your rating." },
+      {
+        property: "og:description",
+        content: "Finding a DUEL opponent near your rating.",
+      },
     ],
   }),
   component: Matchmaking,
 });
 
 function Matchmaking() {
-  useEffect(() => { resetGameTrack(); return startMusic("matchmaking"); }, []);
+  useEffect(() => {
+    resetGameTrack();
+    return startMusic("matchmaking");
+  }, []);
   const { game, friend: friendMode, ladder: ladderMode } = Route.useSearch();
   const navigate = useNavigate();
-  const { profile, findMatch, startFriendMatch, cancelMatch, startLadder, continueLadder, ladder } = useDuel();
+  const {
+    ready,
+    profile,
+    findMatch,
+    startFriendMatch,
+    cancelMatch,
+    startLadder,
+    continueLadder,
+    ladder,
+  } = useDuel();
   const [found, setFound] = useState<ActiveMatch | null>(null);
-  const started = useRef(false);
-
+  const [error, setError] = useState("");
   useEffect(() => {
-    const beeps = setInterval(() => sfx.search(), 700);
-    if (started.current) return () => clearInterval(beeps);
-    started.current = true;
-
-    const session=friendMode?getFriendSession():null;
-    const friend=session?.code ? session : null;
-    const matching = ladderMode==="start" ? startLadder(game) : ladderMode==="continue" ? continueLadder() : friend ? getFriendChallenge(friend.code).then(ch => {
-      if(!ch) throw new Error("Challenge expired");
-      const opponentName=friend.role==="creator"?(ch.guest_name||"YOUR FRIEND"):ch.creator_name;
-      const opponentAvatar=friend.role==="creator"?(ch.guest_avatar||"🎮"):ch.creator_avatar;
-      return startFriendMatch({gameId:game,seed:ch.seed,code:friend.code,token:friend.token,role:friend.role,opponentName,opponentAvatar});
-    }) : friendMode ? Promise.reject(new Error("Missing friend challenge session")) : findMatch(game);
-    matching
-      .then((match) => {
-        setFound(match);
-        sfx.go();
-        setTimeout(
-          () =>
-            navigate({
+    if (!ready) return;
+    let live = true,
+      handedOff = false;
+    let navigation: ReturnType<typeof setTimeout> | undefined;
+    const kickoff = setTimeout(() => {
+      const session = friendMode
+        ? getFriendSession(friendMode === "1" ? undefined : friendMode)
+        : null;
+      if (session && getPendingScore(session.code)) {
+        handedOff = true;
+        void navigate({
+          to: "/challenge/$code",
+          params: { code: session.code },
+        });
+        return;
+      }
+      const matching =
+        ladderMode === "start"
+          ? startLadder(game)
+          : ladderMode === "continue"
+            ? continueLadder()
+            : session
+              ? getFriendChallenge(session.code).then((ch) => {
+                  if (!live) throw new DOMException("aborted", "AbortError");
+                  if (!ch || Date.parse(ch.expires_at) <= Date.now())
+                    throw new Error("Challenge expired");
+                  if (
+                    (session.role === "creator"
+                      ? ch.creator_score
+                      : ch.guest_score) != null
+                  )
+                    throw new Error("Run already submitted");
+                  return startFriendMatch({
+                    gameId: ch.game_id,
+                    seed: ch.seed,
+                    code: session.code,
+                    token: session.token,
+                    role: session.role,
+                    wagerEur: ch.wager_eur,
+                    opponentName:
+                      session.role === "creator"
+                        ? ch.guest_name || "YOUR FRIEND"
+                        : ch.creator_name,
+                    opponentAvatar:
+                      session.role === "creator"
+                        ? ch.guest_avatar || "🎮"
+                        : ch.creator_avatar,
+                  });
+                })
+              : friendMode
+                ? Promise.reject(new Error("Missing friend challenge session"))
+                : findMatch(game);
+      void matching
+        .then((match) => {
+          if (!live) return;
+          setFound(match);
+          sfx.go();
+          navigation = setTimeout(() => {
+            if (!live) return;
+            handedOff = true;
+            const routes = {
+              reaction: "/play/reaction",
+              rhythm: "/play/rhythm",
+              precision: "/play/precision",
+              direction: "/play/direction",
+              memory: "/play/memory",
+              flappy: "/play/flappy",
+              dash: "/play/dash",
+              stack: "/play/stack",
+              knife: "/play/knife",
+            } as const;
+            void navigate({
               to:
-                game === "rhythm"
-                  ? "/play/rhythm"
-                  : game === "precision"
-                    ? "/play/precision"
-                    : game === "direction"
-                      ? "/play/direction"
-                      : game === "memory"
-                        ? "/play/memory"
-                        : game === "flappy"
-                          ? "/play/flappy"
-                          : game === "dash"
-                            ? "/play/dash"
-                            : game === "stack"
-                              ? "/play/stack"
-                              : game === "knife"
-                                ? "/play/knife"
-                                : "/play/reaction",
-            }),
-          1600,
-        );
-      })
-      .catch(() => navigate({ to: "/" }));
-
-    return () => clearInterval(beeps);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+                routes[match.gameId as keyof typeof routes] ?? "/play/reaction",
+            });
+          }, 1600);
+        })
+        .catch((error) => {
+          if (live)
+            setError(
+              error instanceof Error ? error.message : "Matchmaking failed",
+            );
+        });
+    }, 0);
+    return () => {
+      live = false;
+      clearTimeout(kickoff);
+      clearTimeout(navigation);
+      if (!handedOff) cancelMatch();
+    };
+  }, [
+    ready,
+    game,
+    friendMode,
+    ladderMode,
+    findMatch,
+    startLadder,
+    continueLadder,
+    startFriendMatch,
+    cancelMatch,
+    navigate,
+  ]);
 
   const abort = () => {
     cancelMatch();
@@ -101,9 +187,13 @@ function Matchmaking() {
             </span>
           </div>
           <h1 className="mt-8 font-display text-xl font-bold tracking-[0.25em] text-foreground">
-            SEARCHING…
+            {error || "SEARCHING…"}
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">{ladderMode ? `Finding a survivor at the same streak${ladder?.streak ? ` · ${ladder.streak} wins` : ""}` : `Finding an opponent near ${profile.rating} MMR`}</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {ladderMode
+              ? `Finding a survivor at the same streak${ladder?.streak ? ` · ${ladder.streak} wins` : ""}`
+              : `Finding an opponent near ${profile.rating} MMR`}
+          </p>
           <button
             type="button"
             onClick={abort}
@@ -118,27 +208,45 @@ function Matchmaking() {
             OPPONENT FOUND
           </p>
           <div className="mt-6 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-            <Fighter avatar={profile.avatar} name={profile.username} rating={profile.rating} />
-            <span className="font-display text-2xl font-bold text-accent">VS</span>
+            <Fighter
+              avatar={profile.avatar}
+              name={profile.username}
+              rating={profile.rating}
+            />
+            <span className="font-display text-2xl font-bold text-accent">
+              VS
+            </span>
             <Fighter
               avatar={found.opponent.avatar}
               name={found.opponent.username}
               rating={found.opponent.rating}
             />
           </div>
-          <p className="mt-8 text-center text-sm text-muted-foreground">Loading arena…</p>
+          <p className="mt-8 text-center text-sm text-muted-foreground">
+            Loading arena…
+          </p>
         </div>
       )}
     </Screen>
   );
 }
 
-function Fighter({ avatar, name, rating }: { avatar: string; name: string; rating: number }) {
+function Fighter({
+  avatar,
+  name,
+  rating,
+}: {
+  avatar: string;
+  name: string;
+  rating: number;
+}) {
   return (
     <div className="min-w-0 rounded-2xl border border-border bg-card px-3 py-5 text-center">
       <span className="text-4xl">{avatar}</span>
       <span className="mt-2 block truncate text-sm font-semibold">{name}</span>
-      <span className="block text-xs tabular-nums text-muted-foreground">{rating} MMR</span>
+      <span className="block text-xs tabular-nums text-muted-foreground">
+        {rating} MMR
+      </span>
     </div>
   );
 }

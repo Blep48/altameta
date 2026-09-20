@@ -1,3 +1,4 @@
+import { RhythmField } from "@/components/duel/MovingField";
 import { submitIfFriend } from "@/lib/duel/friend-match";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -23,7 +24,8 @@ export const Route = createFileRoute("/play/rhythm")({
       { property: "og:title", content: "Rhythm duel — DUEL" },
       {
         property: "og:description",
-        content: "Sudden-death two-button rhythm duel with a unique track every match.",
+        content:
+          "Sudden-death two-button rhythm duel with a unique track every match.",
       },
     ],
   }),
@@ -38,17 +40,20 @@ const NOTE_HEIGHT = 32;
 function RhythmGame() {
   useEffect(() => startMusic("rhythm"), []);
   const navigate = useNavigate();
-  const { activeMatch, finishRhythmMatch, ready, profile, wagerEur } = useDuel();
+  const { activeMatch, finishRhythmMatch, ready, profile, wagerEur } =
+    useDuel();
 
   const [phase, setPhase] = useState<Phase>("ready");
-  const [elapsed, setElapsed] = useState(0);
   const [hits, setHits] = useState(0);
   const [flash, setFlash] = useState<"hit" | "miss" | null>(null);
 
   const seed = activeMatch?.seed ?? 1;
   const notes = useMemo(() => createChart(seed), [seed]);
   const opponentOut = useMemo(
-    () => (activeMatch ? simulateOpponentSurvival(seed, activeMatch.opponent) : MAX_NOTES),
+    () =>
+      activeMatch
+        ? simulateOpponentSurvival(seed, activeMatch.opponent)
+        : MAX_NOTES,
     [seed, activeMatch],
   );
 
@@ -68,7 +73,15 @@ function RhythmGame() {
     if (raf.current) cancelAnimationFrame(raf.current);
     setPhase("over");
     sfx.miss();
-    if(activeMatch?.friend){void submitIfFriend(activeMatch,playerNotes).then(()=>navigate({to:"/challenge/$code",params:{code:activeMatch.friend!.code}}));return;}
+    if (activeMatch?.friend) {
+      void submitIfFriend(activeMatch, playerNotes).then(() =>
+        navigate({
+          to: "/challenge/$code",
+          params: { code: activeMatch.friend!.code },
+        }),
+      );
+      return;
+    }
     const outcome = finishRhythmMatch({
       playerNotes,
       opponentNotes: opponentOut,
@@ -93,7 +106,6 @@ function RhythmGame() {
 
       const tick = () => {
         const t = performance.now() - startAt.current;
-        setElapsed(t);
 
         const pending = notes[nextIndex.current];
         if (!pending) {
@@ -141,20 +153,24 @@ function RhythmGame() {
   if (!activeMatch) return null;
 
   const level = notes[Math.min(nextIndex.current, notes.length - 1)]!.level;
-  const opponentOutMs = opponentOut < notes.length ? notes[opponentOut]!.timeMs + notes[opponentOut]!.windowMs : notes[notes.length - 1]!.timeMs;
-  const opponentAlive = hits < opponentOut && !(phase === "over" && hits >= opponentOut);
+  const opponentOutMs =
+    opponentOut < notes.length
+      ? notes[opponentOut]!.timeMs + notes[opponentOut]!.windowMs
+      : notes[notes.length - 1]!.timeMs;
+  const opponentAlive =
+    hits < opponentOut && !(phase === "over" && hits >= opponentOut);
   const opponentNoteCount = Math.min(hits, opponentOut);
-
-  const visible = notes.filter((n) => {
-    const remaining = n.timeMs - elapsed;
-    return remaining <= n.approachMs && remaining > -n.windowMs && n.index >= nextIndex.current;
-  });
 
   return (
     <main className="mx-auto flex h-[100dvh] w-full max-w-md flex-col overflow-hidden overscroll-none bg-background">
       <div className="shrink-0 px-5 pt-3 text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">How to play</p>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Tap the left or right lane when each note reaches the line. One wrong lane or missed note ends your run.</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">
+          How to play
+        </p>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          Tap the left or right lane when each note reaches the line. One wrong
+          lane or missed note ends your run.
+        </p>
       </div>
       <MatchBalance coins={profile.coins} wagerEur={wagerEur} />
       <header className="grid shrink-0 grid-cols-3 gap-2 px-5 pt-2 text-center">
@@ -168,37 +184,35 @@ function RhythmGame() {
 
       <div className="flex shrink-0 items-center justify-between px-5 pt-2 text-xs text-muted-foreground">
         <span className="truncate">vs {activeMatch.opponent.username}</span>
-        <span className="tabular-nums">track #{seed.toString(36).slice(-6)}</span>
+        <span className="tabular-nums">
+          track #{seed.toString(36).slice(-6)}
+        </span>
       </div>
 
       <section
         className={`relative mx-5 mt-2 min-h-0 flex-1 overflow-hidden rounded-3xl border bg-card ${
-          flash === "miss" ? "animate-shake border-destructive" : "border-border"
+          flash === "miss"
+            ? "animate-shake border-destructive"
+            : "border-border"
         }`}
       >
-        <OpponentOutBanner opponentName={activeMatch.opponent.username} opponentScore={opponentOut} playerScore={hits} wagerEur={wagerEur} outAfterMs={1200 + opponentOutMs} label="notes" />
+        <OpponentOutBanner
+          opponentName={activeMatch.opponent.username}
+          opponentScore={opponentOut}
+          playerScore={hits}
+          wagerEur={wagerEur}
+          outAfterMs={1200 + opponentOutMs}
+          label="notes"
+        />
         <div className="absolute inset-y-0 left-1/2 w-px bg-border" />
         <div
           className="absolute inset-x-0 h-1 bg-primary/70"
           style={{ bottom: HIT_LINE }}
         />
 
-        {phase === "playing" &&
-          visible.map((n) => {
-            const progress = 1 - (n.timeMs - elapsed) / n.approachMs;
-            const travel = `calc((100% - ${HIT_LINE}px - ${NOTE_HEIGHT / 2}px) * ${Math.max(0, 1 - progress)})`;
-            const bottom = `calc(${HIT_LINE}px - ${NOTE_HEIGHT / 2}px + ${travel})`;
-            return (
-              <span
-                key={n.index}
-                className="absolute h-8 w-[38%] rounded-xl bg-primary shadow-[0_0_18px_color-mix(in_oklab,var(--primary)_60%,transparent)]"
-                style={{
-                  bottom,
-                  left: n.lane === 0 ? "6%" : "56%",
-                }}
-              />
-            );
-          })}
+        {phase === "playing" && (
+          <RhythmField notes={notes} startAt={startAt} nextIndex={nextIndex} />
+        )}
 
         {phase === "ready" && (
           <div className="absolute inset-0 grid place-items-center text-center">

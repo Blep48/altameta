@@ -111,6 +111,9 @@ export interface ActiveMatch {
   id: string;
   gameId: string;
   mode: MatchMode;
+  /** Whether this match itself deducted the selected entry stake. */
+  entryCharged: boolean;
+  wagerEur: number;
   opponent: Opponent;
   startedAt: number;
   /** Unique per match; drives the rhythm chart and the precision targets. */

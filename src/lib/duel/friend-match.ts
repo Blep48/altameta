@@ -1,2 +1,7 @@
-import type { ActiveMatch } from "./types";import { submitFriendScore } from "./friend-challenges";
-export async function submitIfFriend(match:ActiveMatch|null,score:number){if(!match?.friend)return false;await submitFriendScore(match.friend.code,match.friend.token,score);return true}
+import type { ActiveMatch } from "./types";
+import { savePendingScore, retryPendingScore } from "./pending-score";
+export async function submitIfFriend(match: ActiveMatch | null, score: number) {
+  if (!match?.friend) return false;
+  savePendingScore({ ...match.friend, seed: match.seed, score });
+  return retryPendingScore(match.friend.code);
+}

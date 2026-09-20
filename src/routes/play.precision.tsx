@@ -40,10 +40,11 @@ type Phase = "ready" | "playing" | "over";
 function PrecisionGame() {
   useEffect(() => startMusic("precision"), []);
   const navigate = useNavigate();
-  const { activeMatch, finishPrecisionMatch, ready, profile, wagerEur } = useDuel();
+  const { activeMatch, finishPrecisionMatch, ready, profile, wagerEur } =
+    useDuel();
 
   const [phase, setPhase] = useState<Phase>("ready");
-  const [position, setPosition] = useState(0);
+  const markerRef = useRef<HTMLSpanElement>(null);
   const [stops, setStops] = useState(0);
   const [points, setPoints] = useState(0);
   const [perfects, setPerfects] = useState(0);
@@ -80,7 +81,15 @@ function PrecisionGame() {
     if (raf.current) cancelAnimationFrame(raf.current);
     setPhase("over");
     sfx.miss();
-    if(activeMatch?.friend){void submitIfFriend(activeMatch,pointsRef.current).then(()=>navigate({to:"/challenge/$code",params:{code:activeMatch.friend!.code}}));return;}
+    if (activeMatch?.friend) {
+      void submitIfFriend(activeMatch, pointsRef.current).then(() =>
+        navigate({
+          to: "/challenge/$code",
+          params: { code: activeMatch.friend!.code },
+        }),
+      );
+      return;
+    }
     const outcome = finishPrecisionMatch({
       player: {
         stops: stopsRef.current,
@@ -112,7 +121,8 @@ function PrecisionGame() {
         lastT.current = now;
 
         if (!lockRef.current) {
-          let next = posRef.current + dirRef.current * speedFor(stopsRef.current) * dt;
+          let next =
+            posRef.current + dirRef.current * speedFor(stopsRef.current) * dt;
           if (next >= 1) {
             next = 1;
             dirRef.current = -1;
@@ -121,7 +131,8 @@ function PrecisionGame() {
             dirRef.current = 1;
           }
           posRef.current = next;
-          setPosition(next);
+          if (markerRef.current)
+            markerRef.current.style.left = `${next * 100}%`;
         }
 
         raf.current = requestAnimationFrame(tick);
@@ -179,8 +190,13 @@ function PrecisionGame() {
   return (
     <main className="mx-auto flex h-[100dvh] w-full max-w-md flex-col overflow-hidden overscroll-none bg-background">
       <div className="shrink-0 px-5 pt-3 text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">How to play</p>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Press STOP while the marker is inside the target. The inner zone scores double. One miss ends the duel.</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">
+          How to play
+        </p>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          Press STOP while the marker is inside the target. The inner zone
+          scores double. One miss ends the duel.
+        </p>
       </div>
       <MatchBalance coins={profile.coins} wagerEur={wagerEur} />
       <header className="grid shrink-0 grid-cols-3 gap-2 px-5 pt-2 text-center">
@@ -191,11 +207,20 @@ function PrecisionGame() {
 
       <div className="flex shrink-0 items-center justify-between px-5 pt-2 text-xs text-muted-foreground">
         <span className="truncate">vs {activeMatch.opponent.username}</span>
-        <span className="tabular-nums">speed ×{speedFor(stops).toFixed(1)}</span>
+        <span className="tabular-nums">
+          speed ×{speedFor(stops).toFixed(1)}
+        </span>
       </div>
 
       <section className="relative mx-5 mt-3 shrink rounded-3xl border border-border bg-card px-4 py-[clamp(1rem,4vh,2.5rem)]">
-        <OpponentOutBanner opponentName={activeMatch.opponent.username} opponentScore={opponentRun.current.points} playerScore={points} wagerEur={wagerEur} outAfterMs={900 + opponentRun.current.stops * 950} label="points" />
+        <OpponentOutBanner
+          opponentName={activeMatch.opponent.username}
+          opponentScore={opponentRun.current.points}
+          playerScore={points}
+          wagerEur={wagerEur}
+          outAfterMs={900 + opponentRun.current.stops * 950}
+          label="points"
+        />
         <div className="relative h-14 w-full overflow-hidden rounded-2xl bg-muted/30">
           <span
             className="absolute inset-y-0 rounded-xl bg-primary/25"
@@ -207,7 +232,8 @@ function PrecisionGame() {
           />
           <span
             className="absolute inset-y-[-6px] w-[3px] -translate-x-1/2 rounded-full bg-foreground shadow-[0_0_14px_hsl(var(--foreground))]"
-            style={{ left: `${position * 100}%` }}
+            ref={markerRef}
+            style={{ left: "0%" }}
           />
         </div>
 
@@ -254,7 +280,9 @@ function PrecisionGame() {
 function Meter({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-border bg-card px-2 py-2">
-      <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+      <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        {label}
+      </p>
       <p className="font-display text-xl font-bold tabular-nums">{value}</p>
     </div>
   );
