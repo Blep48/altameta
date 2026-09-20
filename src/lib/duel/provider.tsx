@@ -142,7 +142,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
         ...(profile.peakLeagueIndex != null ? { peakLeagueIndex: profile.peakLeagueIndex } : {}),
         signal: controller.signal,
       });
-      const typedMatch: ActiveMatch = { ...match, mode };
+      const typedMatch: ActiveMatch = { ...match, mode, entryCharged: chargeEntry };
       setActiveMatch(typedMatch);
       return typedMatch;
     },
@@ -152,7 +152,7 @@ export function DuelProvider({ children }: { children: ReactNode }) {
   const findMatch = useCallback((gameId: string) => findMatchCore(gameId, true, "duel"), [findMatchCore]);
 
   const startFriendMatch: DuelContextValue["startFriendMatch"] = useCallback((args) => {
-    const match: ActiveMatch = { id: `friend-${args.code}`, gameId: args.gameId, mode:"friend", seed: args.seed, startedAt: Date.now(), friend:{code:args.code,token:args.token,role:args.role}, opponent:{id:"friend",username:args.opponentName,avatar:args.opponentAvatar,rating:profile.rating,meanReactionMs:300,varianceMs:40} };
+    const match: ActiveMatch = { id: `friend-${args.code}`, gameId: args.gameId, mode:"friend", entryCharged:false, seed: args.seed, startedAt: Date.now(), friend:{code:args.code,token:args.token,role:args.role}, opponent:{id:"friend",username:args.opponentName,avatar:args.opponentAvatar,rating:profile.rating,meanReactionMs:300,varianceMs:40} };
     setActiveMatch(match); return match;
   }, [profile.rating]);
 
@@ -196,16 +196,13 @@ export function DuelProvider({ children }: { children: ReactNode }) {
     abortRef.current?.abort();
     abortRef.current = null;
     setActiveMatch((current) => {
-      // Refund only when an entry was actually charged. Ladder continuation rounds do not charge here.
       const run = ladderRef.current;
-      const shouldRefund = !run?.active || run.streak === 0;
-      if (shouldRefund) setProfile((prev) => {
+      if (current?.entryCharged) setProfile((prev) => {
         const refunded = { ...prev, coins: prev.coins + eurosToUnits(wagerEur) };
         storage.write(STORAGE_KEYS.profile, refunded);
         return refunded;
       });
-      if (run?.active && run.streak === 0) { writeLadder(null); setLadder(null); ladderRef.current=null; }
-      void current;
+      if (current?.mode === "ladder" && current.entryCharged && run?.active && run.streak === 0) { writeLadder(null); setLadder(null); ladderRef.current=null; }
       return null;
     });
   }, [wagerEur]);
