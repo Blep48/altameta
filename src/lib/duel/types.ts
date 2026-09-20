@@ -70,9 +70,12 @@ export interface SurvivalSummary {
   opponentScore: number;
 }
 
+export type MatchMode = "duel" | "ladder" | "friend";
+
 export interface MatchOutcome {
   id: string;
   gameId: string;
+  mode?: MatchMode;
   opponentName: string;
   opponentAvatar: string;
   opponentRating: number;
@@ -107,6 +110,7 @@ export interface MatchOutcome {
 export interface ActiveMatch {
   id: string;
   gameId: string;
+  mode: MatchMode;
   opponent: Opponent;
   startedAt: number;
   /** Unique per match; drives the rhythm chart and the precision targets. */
