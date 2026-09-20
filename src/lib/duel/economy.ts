@@ -5,6 +5,7 @@ export const STARTING_BALANCE = 10_000; // €100.00
 export const WAGER_OPTIONS_EUR = [1, 2, 5, 10, 20, 30, 50] as const;
 export const DEFAULT_WAGER_EUR = 1;
 export const EUR_TO_UNITS = 100;
+export const PAYOUT_RATE = 0.95;
 
 export function eurosToUnits(euros: number): number {
   return Math.round(euros * EUR_TO_UNITS);
@@ -14,18 +15,16 @@ export function canAfford(balance: number, wagerEur: number): boolean {
   return balance >= eurosToUnits(wagerEur);
 }
 
-/** Amount returned after a win. The original demo economics are preserved:
- * the stake is deducted up front, then stake + 1.9x stake are returned.
- */
+/** Total return, including the winner's stake: 95% of both entries. */
 export function settlementAmount(won: boolean, wagerEur: number): number {
   const stake = eurosToUnits(wagerEur);
-  return won ? stake + Math.round(stake * 1.9) : 0;
+  return won ? Math.round(stake * 2 * PAYOUT_RATE) : 0;
 }
 
 /** Net balance change for display/history. */
 export function balanceDelta(won: boolean, wagerEur: number): number {
   const stake = eurosToUnits(wagerEur);
-  return won ? Math.round(stake * 1.9) : -stake;
+  return settlementAmount(won, wagerEur) - stake;
 }
 
 export function formatEuro(valueInUnits: number, signed = false): string {

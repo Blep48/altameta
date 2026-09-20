@@ -3,14 +3,23 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
 import { STORAGE_KEYS, storage } from "./storage";
-import { createDefaultProfile, applyMatchToProfile, ratingDeltaFor } from "./player";
-import { DEFAULT_WAGER_EUR, balanceDelta, canAfford, eurosToUnits, settlementAmount } from "./economy";
+import {
+  createDefaultProfile,
+  applyMatchToProfile,
+  ratingDeltaFor,
+} from "./player";
+import {
+  DEFAULT_WAGER_EUR,
+  balanceDelta,
+  canAfford,
+  eurosToUnits,
+  settlementAmount,
+} from "./economy";
 import { localMatchmaking } from "./matchmaking";
 import { scoreRounds } from "./engine/reaction";
 import { scoreRhythm } from "./engine/rhythm";
@@ -18,515 +27,555 @@ import { scorePrecision, type PrecisionRun } from "./engine/precision";
 import { scoreDirection } from "./engine/direction";
 import { scoreMonkey } from "./engine/monkey";
 import { setMuted as setAudioMuted } from "./audio";
-import type { ActiveMatch, MatchMode, MatchOutcome, PlayerProfile, RoundResult } from "./types";
-import type { FriendChallenge } from "./friend-challenges";
-import { ladderPrizeUnits, readLadder, writeLadder, type LadderRun } from "./ladder";
+import type {
+  ActiveMatch,
+  MatchMode,
+  MatchOutcome,
+  PlayerProfile,
+  RoundResult,
+} from "./types";
+import { clearFriendSessions, type FriendChallenge } from "./friend-challenges";
+import { ladderPrizeUnits, readLadder } from "./ladder";
+import {
+  chargeEntry,
+  newAccount,
+  recordOutcome,
+  refundEntry,
+  releaseFriend,
+  reserveFriend,
+  validWager,
+  type Account,
+} from "./ledger";
+import { MINIGAMES } from "./games";
+import { clearPendingScores } from "./pending-score";
 
-interface DuelContextValue {
-  ready: boolean;
-  profile: PlayerProfile;
-  history: MatchOutcome[];
-  activeMatch: ActiveMatch | null;
-  lastOutcome: MatchOutcome | null;
-  muted: boolean;
-  toggleMuted: () => void;
-  updateProfile: (patch: Partial<Pick<PlayerProfile, "username" | "avatar" | "coins">>) => void;
-  /** Takes the selected demo wager and finds an opponent. */
-  findMatch: (gameId: string) => Promise<ActiveMatch>;
-  startFriendMatch: (args:{gameId:string;seed:number;code:string;token:string;role:"creator"|"guest";opponentName:string;opponentAvatar:string}) => ActiveMatch;
-  reserveFriendWager: (code:string,wagerEur:number) => boolean;
-  settleFriendChallenge: (challenge:FriendChallenge,role:"creator"|"guest") => void;
-  cancelMatch: () => void;
-  finishMatch: (rounds: RoundResult[]) => MatchOutcome | null;
-  finishRhythmMatch: (args: {
-    playerNotes: number;
-    opponentNotes: number;
-    offsets: number[];
-  }) => MatchOutcome | null;
-  finishPrecisionMatch: (args: {
-    player: PrecisionRun;
-    opponent: PrecisionRun;
-  }) => MatchOutcome | null;
-  finishDirectionMatch: (args: { playerArrows: number; opponentArrows: number }) => MatchOutcome | null;
-  finishMonkeyMatch: (args: { playerLevels: number; opponentLevels: number }) => MatchOutcome | null;
-  finishSurvivalMatch: (args: { playerScore: number; opponentScore: number }) => MatchOutcome | null;
-  resetProgress: () => void;
+const ACCOUNT_KEY = "account:v1";
+type FriendArgs = {
+  gameId: string;
+  seed: number;
+  code: string;
+  token: string;
+  role: "creator" | "guest";
+  opponentName: string;
+  opponentAvatar: string;
   wagerEur: number;
-  setWagerEur: (value: number) => void;
-  canPlay: boolean;
-  ladder: LadderRun | null;
-  startLadder: (gameId:string) => Promise<ActiveMatch>;
-  continueLadder: () => Promise<ActiveMatch>;
-  cashOutLadder: () => void;
+};
+type ScoreData = Pick<
+  MatchOutcome,
+  | "playerAvgMs"
+  | "opponentAvgMs"
+  | "playerBestMs"
+  | "falseStarts"
+  | "won"
+  | "rounds"
+> &
+  Partial<
+    Pick<
+      MatchOutcome,
+      "rhythm" | "precision" | "direction" | "monkey" | "survival"
+    >
+  >;
+
+function loadAccount() {
+  const saved = storage.read<Account>(ACCOUNT_KEY);
+  if (
+    saved?.version === 1 &&
+    Number.isFinite(saved.profile?.coins) &&
+    Array.isArray(saved.history)
+  )
+    return refundEntry(saved);
+  const account = newAccount(
+    storage.read<PlayerProfile>(STORAGE_KEYS.profile) ?? createDefaultProfile(),
+  );
+  account.history = storage.read<MatchOutcome[]>(STORAGE_KEYS.history) ?? [];
+  account.ladder = readLadder();
+  for (const key of Object.keys(localStorage)) {
+    if (key.startsWith("altameta:friendSettled:"))
+      account.settled.push(key.slice("altameta:friendSettled:".length));
+    if (key.startsWith("altameta:friendReserved:"))
+      account.reserved[key.slice("altameta:friendReserved:".length)] = -1;
+  }
+  return account;
 }
 
-const DuelContext = createContext<DuelContextValue | null>(null);
-
-export function DuelProvider({ children }: { children: ReactNode }) {
-  const [ready, setReady] = useState(false);
-  const [profile, setProfile] = useState<PlayerProfile>(() => createDefaultProfile());
-  const [history, setHistory] = useState<MatchOutcome[]>([]);
-  const [activeMatch, setActiveMatch] = useState<ActiveMatch | null>(null);
+function useDuelState() {
+  const [ready, setReady] = useState(false),
+    readyRef = useRef(false);
+  const [account, setAccount] = useState(() =>
+      newAccount(createDefaultProfile()),
+    ),
+    accountRef = useRef(account);
+  const [activeMatch, setActiveMatch] = useState<ActiveMatch | null>(null),
+    activeRef = useRef<ActiveMatch | null>(null);
   const [lastOutcome, setLastOutcome] = useState<MatchOutcome | null>(null);
   const [muted, setMutedState] = useState(false);
-  const [wagerEur, setWagerEur] = useState(DEFAULT_WAGER_EUR);
+  const [wagerEur, setWager] = useState(DEFAULT_WAGER_EUR),
+    wagerRef = useRef(wagerEur);
   const abortRef = useRef<AbortController | null>(null);
-  const [ladder,setLadder] = useState<LadderRun|null>(null);
-
+  const commit = useCallback((next: Account) => {
+    accountRef.current = next;
+    storage.write(ACCOUNT_KEY, next);
+    setAccount(next);
+  }, []);
+  const setMatch = useCallback((match: ActiveMatch | null) => {
+    activeRef.current = match;
+    setActiveMatch(match);
+  }, []);
+  const leaveGame = useCallback(() => {
+    const match = activeRef.current;
+    if (!match) return;
+    const a = accountRef.current;
+    commit({
+      ...a,
+      entry: null,
+      ladder:
+        match.mode === "ladder" && a.ladder?.active
+          ? { ...a.ladder, active: false, lost: true }
+          : a.ladder,
+    });
+    setMatch(null);
+  }, [commit, setMatch]);
   useEffect(() => {
-    const stored = storage.read<PlayerProfile>(STORAGE_KEYS.profile);
-    if (stored) setProfile(stored);
-    else storage.write(STORAGE_KEYS.profile, createDefaultProfile());
-    setHistory(storage.read<MatchOutcome[]>(STORAGE_KEYS.history) ?? []);
+    commit(loadAccount());
     const m = storage.read<boolean>(STORAGE_KEYS.muted) ?? false;
     setMutedState(m);
     setAudioMuted(m);
-    const savedLadder = readLadder();
-    setLadder(savedLadder);
-    ladderRef.current = savedLadder;
+    readyRef.current = true;
     setReady(true);
-  }, []);
-
-  const persistProfile = useCallback((next: PlayerProfile) => {
-    setProfile(next);
-    storage.write(STORAGE_KEYS.profile, next);
-  }, []);
-
-  const updateProfile: DuelContextValue["updateProfile"] = useCallback(
-    (patch) => {
-      setProfile((prev) => {
-        const next = { ...prev, ...patch };
-        storage.write(STORAGE_KEYS.profile, next);
-        return next;
-      });
-    },
-    [],
-  );
-
-  const saveHighscore = useCallback((gameId: string, score: number, lowerIsBetter = false) => {
-    setProfile(prev => {
-      const highscores = { ...(prev.highscores ?? {}) };
-      const old = highscores[gameId];
-      if (old == null || (lowerIsBetter ? score < old : score > old)) highscores[gameId] = score;
-      const next = { ...prev, highscores }; storage.write(STORAGE_KEYS.profile, next); return next;
-    });
-  }, []);
-
-  const toggleMuted = useCallback(() => {
-    setMutedState((prev) => {
-      const next = !prev;
-      setAudioMuted(next);
-      storage.write(STORAGE_KEYS.muted, next);
-      return next;
-    });
-  }, []);
-
-  const ladderRef=useRef<LadderRun|null>(null);
-  useEffect(()=>{ladderRef.current=ladder},[ladder]);
-  const settlementForMode=useCallback((match:ActiveMatch,won:boolean,amount:number)=>match.mode==="ladder"?0:settlementAmount(won,amount),[]);
-  const tagLadderOutcome=useCallback((outcome:MatchOutcome,match:ActiveMatch)=>{const run=ladderRef.current;if(match.mode!=="ladder"||!run?.active||run.gameId!==outcome.gameId)return outcome;const streak=run.streak+(outcome.won?1:0);const next:LadderRun=outcome.won?{...run,streak}:{...run,active:false,lost:true};writeLadder(next);setLadder(next);ladderRef.current=next;return {...outcome,ladderStreak:streak,ladderPrizeUnits:outcome.won?ladderPrizeUnits(next):0}},[]);
-
-  const findMatchCore = useCallback(
-    async (gameId: string, chargeEntry: boolean, mode: MatchMode) => {
-      if (chargeEntry && !canAfford(profile.coins, wagerEur)) throw new Error("Not enough demo balance");
+    return () => {
       abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-      if (chargeEntry) {
-        const withFee = { ...profile, coins: profile.coins - eurosToUnits(wagerEur) };
-        persistProfile(withFee);
-      }
-      const match = await localMatchmaking.find({
-        gameId,
-        playerRating: profile.rating,
-        ...(profile.peakLeagueIndex != null ? { peakLeagueIndex: profile.peakLeagueIndex } : {}),
-        signal: controller.signal,
-      });
-      const typedMatch: ActiveMatch = { ...match, mode, entryCharged: chargeEntry };
-      setActiveMatch(typedMatch);
-      return typedMatch;
+    };
+  }, [commit]);
+  const setWagerEur = useCallback((amount: number) => {
+    if (validWager(amount)) {
+      wagerRef.current = amount;
+      setWager(amount);
+    }
+  }, []);
+  const updateProfile = useCallback(
+    (patch: Partial<Pick<PlayerProfile, "username" | "avatar" | "coins">>) => {
+      const a = accountRef.current;
+      if (
+        patch.coins != null &&
+        (!Number.isSafeInteger(patch.coins) || patch.coins < 0)
+      )
+        return;
+      commit({ ...a, profile: { ...a.profile, ...patch } });
     },
-    [persistProfile, profile, wagerEur],
+    [commit],
   );
-
-  const findMatch = useCallback((gameId: string) => findMatchCore(gameId, true, "duel"), [findMatchCore]);
-
-  const startFriendMatch: DuelContextValue["startFriendMatch"] = useCallback((args) => {
-    const match: ActiveMatch = { id: `friend-${args.code}`, gameId: args.gameId, mode:"friend", entryCharged:false, seed: args.seed, startedAt: Date.now(), friend:{code:args.code,token:args.token,role:args.role}, opponent:{id:"friend",username:args.opponentName,avatar:args.opponentAvatar,rating:profile.rating,meanReactionMs:300,varianceMs:40} };
-    setActiveMatch(match); return match;
-  }, [profile.rating]);
-
-  const reserveFriendWager = useCallback((code:string, amount:number) => {
-    const key=`altameta:friendReserved:${code}`;
-    if(typeof window==="undefined") return false;
-    if(localStorage.getItem(key)) return true;
-    const stake=eurosToUnits(amount);
-    if(profile.coins<stake) return false;
-    setProfile(prev=>{const next={...prev,coins:prev.coins-stake};storage.write(STORAGE_KEYS.profile,next);return next;});
-    localStorage.setItem(key,"1");
-    return true;
-  },[profile.coins]);
-
-  const settleFriendChallenge = useCallback((ch:FriendChallenge,role:"creator"|"guest") => {
-    if(ch.creator_score==null||ch.guest_score==null||typeof window==="undefined") return;
-    const settledKey=`altameta:friendSettled:${ch.code}`;
-    if(localStorage.getItem(settledKey)) return;
-    const mine=role==="creator"?ch.creator_score:ch.guest_score;
-    const theirs=role==="creator"?ch.guest_score:ch.creator_score;
-    const tie=mine===theirs;
-    const won=!tie&&(ch.score_mode==="low"?mine<theirs:mine>theirs);
-    const stake=eurosToUnits(ch.wager_eur);
-    const payout=tie?stake:(won?settlementAmount(true,ch.wager_eur):0);
-    const delta=tie?0:balanceDelta(won,ch.wager_eur);
-    const opponentName=role==="creator"?(ch.guest_name||"FRIEND"):ch.creator_name;
-    const opponentAvatar=role==="creator"?(ch.guest_avatar||"🎮"):ch.creator_avatar;
-    const outcome:MatchOutcome={id:`friend-${ch.code}-${role}`,gameId:ch.game_id,mode:"friend",opponentName,opponentAvatar,opponentRating:profile.rating,playerAvgMs:mine,opponentAvgMs:theirs,playerBestMs:mine,falseStarts:0,won,tied:tie,friendChallengeCode:ch.code,coinDelta:delta,wagerEur:ch.wager_eur,ratingDelta:0,playedAt:new Date().toISOString(),rounds:[]};
-    setProfile(prev=>{const next={...prev,coins:prev.coins+payout,gamesPlayed:prev.gamesPlayed+1,wins:prev.wins+(won?1:0),losses:prev.losses+(!won&&!tie?1:0)};storage.write(STORAGE_KEYS.profile,next);return next;});
-    setHistory(prev=>{const next=[outcome,...prev.filter(x=>x.id!==outcome.id)].slice(0,50);storage.write(STORAGE_KEYS.history,next);return next;});
-    setLastOutcome(outcome);
-    localStorage.setItem(settledKey,"1");
-  },[profile.rating]);
-
-  const startLadder=useCallback(async(gameId:string)=>{const run:LadderRun={gameId,wagerEur,streak:0,active:true};writeLadder(run);setLadder(run);ladderRef.current=run;return findMatchCore(gameId,true,"ladder")},[wagerEur,findMatchCore]);
-  const continueLadder=useCallback(async()=>{const run=ladderRef.current;if(!run?.active)throw new Error("No active ladder");return findMatchCore(run.gameId,false,"ladder")},[findMatchCore]);
-  const cashOutLadder=useCallback(()=>{const run=ladderRef.current;if(!run?.active||run.streak<1)return;const prize=ladderPrizeUnits(run);setProfile(prev=>{const next={...prev,coins:prev.coins+prize};storage.write(STORAGE_KEYS.profile,next);return next});writeLadder(null);setLadder(null);ladderRef.current=null},[]);
-
+  const toggleMuted = () => {
+    const next = !muted;
+    setAudioMuted(next);
+    storage.write(STORAGE_KEYS.muted, next);
+    setMutedState(next);
+  };
 
   const cancelMatch = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
-    setActiveMatch((current) => {
-      const run = ladderRef.current;
-      if (current?.entryCharged) setProfile((prev) => {
-        const refunded = { ...prev, coins: prev.coins + eurosToUnits(wagerEur) };
-        storage.write(STORAGE_KEYS.profile, refunded);
-        return refunded;
-      });
-      if (current?.mode === "ladder" && current.entryCharged && run?.active && run.streak === 0) { writeLadder(null); setLadder(null); ladderRef.current=null; }
-      return null;
+    commit(refundEntry(accountRef.current));
+    setMatch(null);
+  }, [commit, setMatch]);
+  const findMatchCore = useCallback(
+    async (gameId: string, charge: boolean, mode: MatchMode) => {
+      if (!readyRef.current) throw new Error("Profile is loading");
+      if (!MINIGAMES.some((g) => g.id === gameId && g.available))
+        throw new Error("Unknown game");
+      if (abortRef.current || activeRef.current)
+        throw new Error("A match is already in progress");
+      const a = accountRef.current;
+      const amount =
+        mode === "ladder" && !charge ? a.ladder!.wagerEur : wagerRef.current;
+      const id = crypto.randomUUID();
+      let next = charge ? chargeEntry(a, id, amount, mode) : a;
+      if (mode === "ladder" && charge) {
+        if (a.ladder?.active)
+          throw new Error("Cash out or resume your current Ladder first");
+        next = {
+          ...next,
+          ladder: { gameId, wagerEur: amount, streak: 0, active: true },
+        };
+      }
+      commit(next);
+      const controller = new AbortController();
+      abortRef.current = controller;
+      try {
+        const match = await localMatchmaking.find({
+          gameId,
+          playerRating: next.profile.rating,
+          ...(next.profile.peakLeagueIndex != null
+            ? { peakLeagueIndex: next.profile.peakLeagueIndex }
+            : {}),
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted || abortRef.current !== controller)
+          throw new DOMException("aborted", "AbortError");
+        const typed = {
+          ...match,
+          id,
+          mode,
+          entryCharged: charge,
+          wagerEur: amount,
+        };
+        setMatch(typed);
+        return typed;
+      } catch (error) {
+        commit(refundEntry(accountRef.current, id));
+        throw error;
+      } finally {
+        if (abortRef.current === controller) abortRef.current = null;
+      }
+    },
+    [commit, setMatch],
+  );
+  const findMatch = useCallback(
+    (gameId: string) => findMatchCore(gameId, true, "duel"),
+    [findMatchCore],
+  );
+  const startLadder = useCallback(
+    (gameId: string) => findMatchCore(gameId, true, "ladder"),
+    [findMatchCore],
+  );
+  const continueLadder = useCallback(() => {
+    const run = accountRef.current.ladder;
+    if (!run?.active) return Promise.reject(new Error("No active ladder"));
+    return findMatchCore(run.gameId, false, "ladder");
+  }, [findMatchCore]);
+  const cashOutLadder = useCallback(() => {
+    const a = accountRef.current,
+      run = a.ladder;
+    if (!run?.active || run.streak < 1 || activeRef.current || abortRef.current)
+      return;
+    commit({
+      ...a,
+      ladder: null,
+      profile: { ...a.profile, coins: a.profile.coins + ladderPrizeUnits(run) },
     });
-  }, [wagerEur]);
+  }, [commit]);
+  const startFriendMatch = useCallback(
+    (args: FriendArgs) => {
+      if (!readyRef.current) throw new Error("Profile is loading");
+      const match: ActiveMatch = {
+        id: "friend-" + args.code + "-" + args.role,
+        gameId: args.gameId,
+        mode: "friend",
+        entryCharged: false,
+        wagerEur: args.wagerEur,
+        seed: args.seed,
+        startedAt: Date.now(),
+        friend: { code: args.code, token: args.token, role: args.role },
+        opponent: {
+          id: "friend",
+          username: args.opponentName,
+          avatar: args.opponentAvatar,
+          rating: accountRef.current.profile.rating,
+          meanReactionMs: 300,
+          varianceMs: 40,
+        },
+      };
+      setMatch(match);
+      return match;
+    },
+    [setMatch],
+  );
+  const reserveFriendWager = useCallback(
+    (code: string, amount: number) => {
+      if (!readyRef.current) return false;
+      try {
+        commit(reserveFriend(accountRef.current, code, amount));
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [commit],
+  );
+  const releaseFriendWager = useCallback(
+    (code: string) => commit(releaseFriend(accountRef.current, code)),
+    [commit],
+  );
+  const settleFriendChallenge = useCallback(
+    (ch: FriendChallenge, role: "creator" | "guest") => {
+      if (
+        !readyRef.current ||
+        ch.creator_score == null ||
+        ch.guest_score == null
+      )
+        return;
+      const a = accountRef.current;
+      if (a.settled.includes(ch.code)) return;
+      if (ch.payment_mode === "demo" && a.reserved[ch.code] == null) return;
+      const mine = role === "creator" ? ch.creator_score : ch.guest_score,
+        theirs = role === "creator" ? ch.guest_score : ch.creator_score;
+      const tied = mine === theirs,
+        won =
+          !tied && (ch.score_mode === "low" ? mine < theirs : mine > theirs);
+      const payout =
+        ch.payment_mode === "in_person"
+          ? 0
+          : tied
+            ? eurosToUnits(ch.wager_eur)
+            : settlementAmount(won, ch.wager_eur);
+      const delta =
+        ch.payment_mode === "in_person" || tied
+          ? 0
+          : balanceDelta(won, ch.wager_eur);
+      const outcome: MatchOutcome = {
+        id: "friend-" + ch.code + "-" + role,
+        gameId: ch.game_id,
+        mode: "friend",
+        opponentName:
+          role === "creator" ? ch.guest_name || "FRIEND" : ch.creator_name,
+        opponentAvatar:
+          role === "creator" ? ch.guest_avatar || "🎮" : ch.creator_avatar,
+        opponentRating: a.profile.rating,
+        playerAvgMs: mine,
+        opponentAvgMs: theirs,
+        playerBestMs: mine,
+        falseStarts: 0,
+        won,
+        tied,
+        friendChallengeCode: ch.code,
+        coinDelta: delta,
+        wagerEur: ch.wager_eur,
+        ratingDelta: 0,
+        playedAt: new Date().toISOString(),
+        rounds: [],
+      };
+      const reserved = { ...a.reserved };
+      delete reserved[ch.code];
+      const profile = {
+        ...a.profile,
+        coins: a.profile.coins + payout,
+        gamesPlayed: a.profile.gamesPlayed + 1,
+        wins: a.profile.wins + (won ? 1 : 0),
+        losses: a.profile.losses + (!won && !tied ? 1 : 0),
+      };
+      commit({
+        ...recordOutcome(a, outcome, profile),
+        entry: a.entry,
+        reserved,
+        settled: [...a.settled, ch.code],
+      });
+      setLastOutcome(outcome);
+      if (activeRef.current?.friend?.code === ch.code) setMatch(null);
+    },
+    [commit, setMatch],
+  );
 
+  const finish = useCallback(
+    (data: ScoreData, highscore: number, bestRoundMs: number | null = null) => {
+      const match = activeRef.current;
+      if (!match || match.mode === "friend") return null;
+      activeRef.current = null;
+      const a = accountRef.current,
+        amount = match.wagerEur;
+      let outcome: MatchOutcome = {
+        ...data,
+        id: match.id,
+        gameId: match.gameId,
+        mode: match.mode,
+        opponentName: match.opponent.username,
+        opponentAvatar: match.opponent.avatar,
+        opponentRating: match.opponent.rating,
+        wagerEur: amount,
+        coinDelta: balanceDelta(data.won, amount),
+        ratingDelta: ratingDeltaFor(data.won),
+        playedAt: new Date().toISOString(),
+      };
+      let ladder = a.ladder;
+      if (
+        match.mode === "ladder" &&
+        ladder?.active &&
+        ladder.gameId === match.gameId
+      ) {
+        ladder = data.won
+          ? { ...ladder, streak: ladder.streak + 1 }
+          : { ...ladder, active: false, lost: true };
+        outcome = {
+          ...outcome,
+          coinDelta: data.won ? 0 : -eurosToUnits(amount),
+          ladderStreak: ladder.streak,
+          ladderPrizeUnits: data.won ? ladderPrizeUnits(ladder) : 0,
+        };
+      }
+      const profile = applyMatchToProfile(a.profile, {
+        won: data.won,
+        ratingDelta: outcome.ratingDelta,
+        settlement:
+          match.mode === "ladder" ? 0 : settlementAmount(data.won, amount),
+        bestRoundMs,
+      });
+      const old = profile.highscores?.[match.gameId];
+      if (
+        old == null ||
+        (match.gameId === "reaction" ? highscore < old : highscore > old)
+      )
+        profile.highscores = {
+          ...profile.highscores,
+          [match.gameId]: highscore,
+        };
+      commit({ ...recordOutcome(a, outcome, profile), ladder });
+      setLastOutcome(outcome);
+      setMatch(null);
+      return outcome;
+    },
+    [commit, setMatch],
+  );
   const finishMatch = useCallback(
     (rounds: RoundResult[]) => {
-      if (!activeMatch) return null;
-      const score = scoreRounds(rounds);
-      saveHighscore("reaction", score.playerAvgMs, true);
-      let outcome: MatchOutcome = {
-        id: activeMatch.id,
-        gameId: activeMatch.gameId,
-        mode: activeMatch.mode,
-        opponentName: activeMatch.opponent.username,
-        opponentAvatar: activeMatch.opponent.avatar,
-        opponentRating: activeMatch.opponent.rating,
-        playerAvgMs: score.playerAvgMs,
-        opponentAvgMs: score.opponentAvgMs,
-        playerBestMs: score.playerBestMs,
-        falseStarts: score.falseStarts,
-        won: score.won,
-        coinDelta: balanceDelta(score.won, wagerEur),
-        wagerEur,
-        ratingDelta: ratingDeltaFor(score.won),
-        playedAt: new Date().toISOString(),
-        rounds,
-      };
-
-      outcome=tagLadderOutcome(outcome,activeMatch);
-      setProfile((prev) => {
-        const next = applyMatchToProfile(prev, {
-          won: outcome.won,
-          ratingDelta: outcome.ratingDelta,
-          settlement: settlementForMode(activeMatch,outcome.won, wagerEur),
-          bestRoundMs: score.cleanBestMs,
-        });
-        storage.write(STORAGE_KEYS.profile, next);
-        return next;
-      });
-
-      setHistory((prev) => {
-        const next = [outcome, ...prev].slice(0, 50);
-        storage.write(STORAGE_KEYS.history, next);
-        return next;
-      });
-
-      setLastOutcome(outcome);
-      setActiveMatch(null);
-      return outcome;
+      const s = scoreRounds(rounds);
+      return finish({ ...s, rounds }, s.playerAvgMs, s.cleanBestMs);
     },
-    [activeMatch, wagerEur, saveHighscore],
+    [finish],
   );
-
-  const finishRhythmMatch: DuelContextValue["finishRhythmMatch"] = useCallback(
-    ({ playerNotes, opponentNotes, offsets }) => {
-      if (!activeMatch) return null;
-      const score = scoreRhythm({ playerNotes, opponentNotes, offsets });
-      saveHighscore("rhythm", score.playerNotes);
-      let outcome: MatchOutcome = {
-        id: activeMatch.id,
-        gameId: activeMatch.gameId,
-        mode: activeMatch.mode,
-        opponentName: activeMatch.opponent.username,
-        opponentAvatar: activeMatch.opponent.avatar,
-        opponentRating: activeMatch.opponent.rating,
-        playerAvgMs: score.avgOffsetMs,
-        opponentAvgMs: 0,
-        playerBestMs: score.avgOffsetMs,
-        falseStarts: 0,
-        won: score.won,
-        coinDelta: balanceDelta(score.won, wagerEur),
-        wagerEur,
-        ratingDelta: ratingDeltaFor(score.won),
-        playedAt: new Date().toISOString(),
-        rounds: [],
-        rhythm: {
-          seed: activeMatch.seed,
-          playerNotes: score.playerNotes,
-          opponentNotes: score.opponentNotes,
-          avgOffsetMs: score.avgOffsetMs,
+  const finishRhythmMatch = useCallback(
+    (args: {
+      playerNotes: number;
+      opponentNotes: number;
+      offsets: number[];
+    }) => {
+      const s = scoreRhythm(args);
+      return finish(
+        {
+          playerAvgMs: s.playerNotes,
+          opponentAvgMs: s.opponentNotes,
+          playerBestMs: s.avgOffsetMs,
+          falseStarts: 0,
+          won: s.won,
+          rounds: [],
+          rhythm: { seed: activeRef.current?.seed ?? 0, ...s },
         },
-      };
-
-      outcome=tagLadderOutcome(outcome,activeMatch);
-      setProfile((prev) => {
-        const next = applyMatchToProfile(prev, {
-          won: outcome.won,
-          ratingDelta: outcome.ratingDelta,
-          settlement: settlementForMode(activeMatch,outcome.won, wagerEur),
-          bestRoundMs: null,
-        });
-        storage.write(STORAGE_KEYS.profile, next);
-        return next;
-      });
-
-      setHistory((prev) => {
-        const next = [outcome, ...prev].slice(0, 50);
-        storage.write(STORAGE_KEYS.history, next);
-        return next;
-      });
-
-      setLastOutcome(outcome);
-      setActiveMatch(null);
-      return outcome;
+        s.playerNotes,
+      );
     },
-    [activeMatch, wagerEur],
+    [finish],
   );
-
-  const finishPrecisionMatch: DuelContextValue["finishPrecisionMatch"] = useCallback(
-    ({ player, opponent }) => {
-      if (!activeMatch) return null;
-      const score = scorePrecision({ player, opponent });
-      saveHighscore("precision", score.playerPoints);
-      let outcome: MatchOutcome = {
-        id: activeMatch.id,
-        gameId: activeMatch.gameId,
-        mode: activeMatch.mode,
-        opponentName: activeMatch.opponent.username,
-        opponentAvatar: activeMatch.opponent.avatar,
-        opponentRating: activeMatch.opponent.rating,
-        playerAvgMs: score.playerPoints,
-        opponentAvgMs: score.opponentPoints,
-        playerBestMs: score.playerPoints,
-        falseStarts: 0,
-        won: score.won,
-        coinDelta: balanceDelta(score.won, wagerEur),
-        wagerEur,
-        ratingDelta: ratingDeltaFor(score.won),
-        playedAt: new Date().toISOString(),
-        rounds: [],
-        precision: {
-          seed: activeMatch.seed,
-          playerPoints: score.playerPoints,
-          opponentPoints: score.opponentPoints,
-          playerStops: score.playerStops,
-          opponentStops: score.opponentStops,
-          perfects: score.perfects,
+  const finishPrecisionMatch = useCallback(
+    (args: { player: PrecisionRun; opponent: PrecisionRun }) => {
+      const s = scorePrecision(args);
+      return finish(
+        {
+          playerAvgMs: s.playerPoints,
+          opponentAvgMs: s.opponentPoints,
+          playerBestMs: s.playerPoints,
+          falseStarts: 0,
+          won: s.won,
+          rounds: [],
+          precision: { seed: activeRef.current?.seed ?? 0, ...s },
         },
-      };
-
-      outcome=tagLadderOutcome(outcome,activeMatch);
-      setProfile((prev) => {
-        const next = applyMatchToProfile(prev, {
-          won: outcome.won,
-          ratingDelta: outcome.ratingDelta,
-          settlement: settlementForMode(activeMatch,outcome.won, wagerEur),
-          bestRoundMs: null,
-        });
-        storage.write(STORAGE_KEYS.profile, next);
-        return next;
-      });
-
-      setHistory((prev) => {
-        const next = [outcome, ...prev].slice(0, 50);
-        storage.write(STORAGE_KEYS.history, next);
-        return next;
-      });
-
-      setLastOutcome(outcome);
-      setActiveMatch(null);
-      return outcome;
+        s.playerPoints,
+      );
     },
-    [activeMatch, wagerEur],
+    [finish],
   );
-
-  const finishDirectionMatch: DuelContextValue["finishDirectionMatch"] = useCallback(
-    ({ playerArrows, opponentArrows }) => {
-      if (!activeMatch) return null;
-      const score = scoreDirection(playerArrows, opponentArrows);
-      saveHighscore("direction", score.playerArrows);
-      let outcome: MatchOutcome = {
-        id: activeMatch.id,
-        gameId: activeMatch.gameId,
-        mode: activeMatch.mode,
-        opponentName: activeMatch.opponent.username,
-        opponentAvatar: activeMatch.opponent.avatar,
-        opponentRating: activeMatch.opponent.rating,
-        playerAvgMs: score.playerArrows,
-        opponentAvgMs: score.opponentArrows,
-        playerBestMs: score.playerArrows,
-        falseStarts: 0,
-        won: score.won,
-        coinDelta: balanceDelta(score.won, wagerEur),
-        wagerEur,
-        ratingDelta: ratingDeltaFor(score.won),
-        playedAt: new Date().toISOString(),
-        rounds: [],
-        direction: { seed: activeMatch.seed, playerArrows: score.playerArrows, opponentArrows: score.opponentArrows },
-      };
-      outcome=tagLadderOutcome(outcome,activeMatch);
-      setProfile((prev) => {
-        const next = applyMatchToProfile(prev, { won: outcome.won, ratingDelta: outcome.ratingDelta, settlement: settlementForMode(activeMatch,outcome.won, wagerEur), bestRoundMs: null });
-        storage.write(STORAGE_KEYS.profile, next);
-        return next;
-      });
-      setHistory((prev) => {
-        const next = [outcome, ...prev].slice(0, 50);
-        storage.write(STORAGE_KEYS.history, next);
-        return next;
-      });
-      setLastOutcome(outcome);
-      setActiveMatch(null);
-      return outcome;
+  const finishDirectionMatch = useCallback(
+    (args: { playerArrows: number; opponentArrows: number }) => {
+      const s = scoreDirection(args.playerArrows, args.opponentArrows);
+      return finish(
+        {
+          playerAvgMs: s.playerArrows,
+          opponentAvgMs: s.opponentArrows,
+          playerBestMs: s.playerArrows,
+          falseStarts: 0,
+          won: s.won,
+          rounds: [],
+          direction: { seed: activeRef.current?.seed ?? 0, ...s },
+        },
+        s.playerArrows,
+      );
     },
-    [activeMatch, wagerEur],
+    [finish],
   );
-
-  const finishMonkeyMatch: DuelContextValue["finishMonkeyMatch"] = useCallback(
-    ({ playerLevels, opponentLevels }) => {
-      if (!activeMatch) return null;
-      const score = scoreMonkey(playerLevels, opponentLevels);
-      saveHighscore("memory", score.playerLevels);
-      let outcome: MatchOutcome = {
-        id: activeMatch.id, gameId: activeMatch.gameId,
-        mode: activeMatch.mode,
-        opponentName: activeMatch.opponent.username, opponentAvatar: activeMatch.opponent.avatar,
-        opponentRating: activeMatch.opponent.rating, playerAvgMs: score.playerLevels,
-        opponentAvgMs: score.opponentLevels, playerBestMs: score.playerLevels, falseStarts: 0,
-        won: score.won, coinDelta: balanceDelta(score.won, wagerEur), wagerEur,
-        ratingDelta: ratingDeltaFor(score.won), playedAt: new Date().toISOString(), rounds: [],
-        monkey: { seed: activeMatch.seed, playerLevels: score.playerLevels, opponentLevels: score.opponentLevels },
-      };
-      outcome=tagLadderOutcome(outcome,activeMatch);
-      setProfile(prev => {
-        const next = applyMatchToProfile(prev,{won:outcome.won,ratingDelta:outcome.ratingDelta,settlement:settlementForMode(activeMatch,outcome.won,wagerEur),bestRoundMs:null});
-        storage.write(STORAGE_KEYS.profile,next); return next;
-      });
-      setHistory(prev => { const next=[outcome,...prev].slice(0,50);storage.write(STORAGE_KEYS.history,next);return next;});
-      setLastOutcome(outcome); setActiveMatch(null); return outcome;
-    }, [activeMatch,wagerEur,saveHighscore],
+  const finishMonkeyMatch = useCallback(
+    (args: { playerLevels: number; opponentLevels: number }) => {
+      const s = scoreMonkey(args.playerLevels, args.opponentLevels);
+      return finish(
+        {
+          playerAvgMs: s.playerLevels,
+          opponentAvgMs: s.opponentLevels,
+          playerBestMs: s.playerLevels,
+          falseStarts: 0,
+          won: s.won,
+          rounds: [],
+          monkey: { seed: activeRef.current?.seed ?? 0, ...s },
+        },
+        s.playerLevels,
+      );
+    },
+    [finish],
   );
-
-  const finishSurvivalMatch: DuelContextValue["finishSurvivalMatch"] = useCallback(
-    ({ playerScore, opponentScore }) => {
-      if (!activeMatch) return null;
-      const won = playerScore > opponentScore;
-      saveHighscore(activeMatch.gameId, playerScore);
-      let outcome: MatchOutcome = {
-        id: activeMatch.id, gameId: activeMatch.gameId,
-        mode: activeMatch.mode,
-        opponentName: activeMatch.opponent.username, opponentAvatar: activeMatch.opponent.avatar,
-        opponentRating: activeMatch.opponent.rating, playerAvgMs: playerScore,
-        opponentAvgMs: opponentScore, playerBestMs: playerScore, falseStarts: 0,
-        won, coinDelta: balanceDelta(won, wagerEur), wagerEur,
-        ratingDelta: ratingDeltaFor(won), playedAt: new Date().toISOString(), rounds: [],
-        survival: { seed: activeMatch.seed, playerScore, opponentScore },
-      };
-      outcome=tagLadderOutcome(outcome,activeMatch);
-      setProfile(prev => {
-        const next = applyMatchToProfile(prev,{won,ratingDelta:outcome.ratingDelta,settlement:settlementForMode(activeMatch,won,wagerEur),bestRoundMs:null});
-        storage.write(STORAGE_KEYS.profile,next); return next;
-      });
-      setHistory(prev => { const next=[outcome,...prev].slice(0,50);storage.write(STORAGE_KEYS.history,next);return next;});
-      setLastOutcome(outcome); setActiveMatch(null); return outcome;
-    }, [activeMatch,wagerEur],
+  const finishSurvivalMatch = useCallback(
+    (args: { playerScore: number; opponentScore: number }) =>
+      finish(
+        {
+          playerAvgMs: args.playerScore,
+          opponentAvgMs: args.opponentScore,
+          playerBestMs: args.playerScore,
+          falseStarts: 0,
+          won: args.playerScore > args.opponentScore,
+          rounds: [],
+          survival: { seed: activeRef.current?.seed ?? 0, ...args },
+        },
+        args.playerScore,
+      ),
+    [finish],
   );
-
   const resetProgress = useCallback(() => {
-    const fresh = createDefaultProfile();
-    persistProfile(fresh);
-    setHistory([]);
-    storage.write(STORAGE_KEYS.history, []);
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setMatch(null);
     setLastOutcome(null);
-    setActiveMatch(null);
-  }, [persistProfile]);
-
-  const value = useMemo<DuelContextValue>(
-    () => ({
-      ready,
-      profile,
-      history,
-      activeMatch,
-      lastOutcome,
-      muted,
-      toggleMuted,
-      updateProfile,
-      findMatch,
-      startFriendMatch,
-      reserveFriendWager,
-      settleFriendChallenge,
-      cancelMatch,
-      finishMatch,
-      finishRhythmMatch,
-      finishPrecisionMatch,
-      finishDirectionMatch,
-      finishMonkeyMatch,
-      finishSurvivalMatch,
-      resetProgress,
-      wagerEur,
-      setWagerEur,
-      canPlay: canAfford(profile.coins, wagerEur),
-      ladder,
-      startLadder,
-      continueLadder,
-      cashOutLadder,
-    }),
-    [
-      ready,
-      profile,
-      history,
-      activeMatch,
-      lastOutcome,
-      muted,
-      toggleMuted,
-      updateProfile,
-      findMatch,
-      startFriendMatch,
-      reserveFriendWager,
-      settleFriendChallenge,
-      cancelMatch,
-      finishMatch,
-      finishRhythmMatch,
-      finishPrecisionMatch,
-      finishDirectionMatch,
-      finishMonkeyMatch,
-      finishSurvivalMatch,
-      resetProgress,
-      wagerEur,
-    ],
-  );
-
+    clearFriendSessions();
+    clearPendingScores();
+    localStorage.removeItem("altameta:ladder");
+    for (const key of Object.keys(localStorage))
+      if (
+        key.startsWith("altameta:friendReserved:") ||
+        key.startsWith("altameta:friendSettled:")
+      )
+        localStorage.removeItem(key);
+    commit(newAccount(createDefaultProfile()));
+    setWagerEur(DEFAULT_WAGER_EUR);
+  }, [commit, setMatch, setWagerEur]);
+  return {
+    ready,
+    profile: account.profile,
+    history: account.history,
+    ladder: account.ladder,
+    activeMatch,
+    lastOutcome,
+    muted,
+    toggleMuted,
+    updateProfile,
+    findMatch,
+    startFriendMatch,
+    reserveFriendWager,
+    releaseFriendWager,
+    settleFriendChallenge,
+    cancelMatch,
+    leaveGame,
+    finishMatch,
+    finishRhythmMatch,
+    finishPrecisionMatch,
+    finishDirectionMatch,
+    finishMonkeyMatch,
+    finishSurvivalMatch,
+    resetProgress,
+    wagerEur: activeMatch?.wagerEur ?? wagerEur,
+    setWagerEur,
+    canPlay: ready && canAfford(account.profile.coins, wagerEur),
+    startLadder,
+    continueLadder,
+    cashOutLadder,
+  };
+}
+const DuelContext = createContext<ReturnType<typeof useDuelState> | null>(null);
+export function DuelProvider({ children }: { children: ReactNode }) {
+  const value = useDuelState();
   return <DuelContext.Provider value={value}>{children}</DuelContext.Provider>;
 }
-
 export function useDuel() {
   const ctx = useContext(DuelContext);
   if (!ctx) throw new Error("useDuel must be used inside DuelProvider");

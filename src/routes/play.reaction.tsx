@@ -5,6 +5,7 @@ import { useDuel } from "@/lib/duel/provider";
 import { sfx, startMusic } from "@/lib/duel/audio";
 import { MatchBalance } from "@/components/duel/MatchBalance";
 import { inputNow } from "@/lib/duel/game-loop";
+import { createTimerGroup } from "@/lib/duel/timers";
 import {
   TOTAL_ROUNDS,
   average,
@@ -17,9 +18,16 @@ export const Route = createFileRoute("/play/reaction")({
   head: () => ({
     meta: [
       { title: "Reaction duel — DUEL" },
-      { name: "description", content: "Five rounds of pure reaction speed. Tap the moment the target turns green." },
+      {
+        name: "description",
+        content:
+          "Five rounds of pure reaction speed. Tap the moment the target turns green.",
+      },
       { property: "og:title", content: "Reaction duel — DUEL" },
-      { property: "og:description", content: "Five rounds of pure reaction speed against your opponent." },
+      {
+        property: "og:description",
+        content: "Five rounds of pure reaction speed against your opponent.",
+      },
     ],
   }),
   component: ReactionGame,
@@ -39,17 +47,21 @@ function ReactionGame() {
   const [lastMs, setLastMs] = useState<number | null>(null);
   const finishing = useRef(false);
   const goAt = useRef(0);
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const timers = useRef(createTimerGroup());
+  const roundLocked = useRef(false);
 
   const later = useCallback((fn: () => void, ms: number) => {
-    timers.current.push(setTimeout(fn, ms));
+    timers.current.later(fn, ms);
   }, []);
 
   useEffect(() => {
     if (ready && !activeMatch && !finishing.current) navigate({ to: "/" });
   }, [ready, activeMatch, navigate]);
 
-  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  useEffect(() => {
+    const group = timers.current;
+    return () => group.clear();
+  }, []);
 
   // Intro: GET READY -> 3, 2, 1 -> first round
   useEffect(() => {
@@ -72,6 +84,8 @@ function ReactionGame() {
   }, [activeMatch]);
 
   const startRound = useCallback(() => {
+    timers.current.clear();
+    roundLocked.current = false;
     setPhase("waiting");
     later(() => {
       goAt.current = inputNow();
@@ -82,7 +96,9 @@ function ReactionGame() {
 
   const commitRound = useCallback(
     (ms: number, falseStart: boolean) => {
-      if (!activeMatch) return;
+      if (!activeMatch || roundLocked.current) return;
+      roundLocked.current = true;
+      timers.current.clear();
       const result = buildRound(round, ms, falseStart, activeMatch.opponent);
       const next = [...rounds, result];
       setRounds(next);
@@ -91,7 +107,18 @@ function ReactionGame() {
 
       later(() => {
         if (next.length >= TOTAL_ROUNDS) {
-          if(activeMatch.friend){const score=Math.round(next.reduce((a,r)=>a+r.playerMs,0)/next.length);void submitIfFriend(activeMatch,score).then(()=>navigate({to:"/challenge/$code",params:{code:activeMatch.friend!.code}}));return;}
+          if (activeMatch.friend) {
+            const score = Math.round(
+              next.reduce((a, r) => a + r.playerMs, 0) / next.length,
+            );
+            void submitIfFriend(activeMatch, score).then(() =>
+              navigate({
+                to: "/challenge/$code",
+                params: { code: activeMatch.friend!.code },
+              }),
+            );
+            return;
+          }
           finishing.current = true;
           const outcome = finishMatch(next);
           if (outcome) {
@@ -139,19 +166,29 @@ function ReactionGame() {
   return (
     <main className="mx-auto flex h-[100dvh] w-full max-w-md flex-col overflow-hidden overscroll-none bg-background">
       <div className="shrink-0 px-5 pt-3 text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">How to play</p>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">5 rounds. Wait for the arena to turn green, then tap as fast as possible. Tapping early gives you a penalty.</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary">
+          How to play
+        </p>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+          5 rounds. Wait for the arena to turn green, then tap as fast as
+          possible. Tapping early gives you a penalty.
+        </p>
       </div>
       <MatchBalance coins={profile.coins} wagerEur={wagerEur} />
       <header className="grid shrink-0 grid-cols-3 gap-2 px-5 pt-2 text-center">
-        <Meter label="Round" value={`${Math.min(round, TOTAL_ROUNDS)}/${TOTAL_ROUNDS}`} />
+        <Meter
+          label="Round"
+          value={`${Math.min(round, TOTAL_ROUNDS)}/${TOTAL_ROUNDS}`}
+        />
         <Meter label="Average" value={avg ? `${avg}` : "—"} />
         <Meter label="Best" value={best ? `${best}` : "—"} />
       </header>
 
       <div className="flex shrink-0 items-center justify-between px-5 pt-2 text-xs text-muted-foreground">
         <span className="truncate">vs {activeMatch.opponent.username}</span>
-        <span className="tabular-nums">last {lastMs != null ? `${lastMs} ms` : "—"}</span>
+        <span className="tabular-nums">
+          last {lastMs != null ? `${lastMs} ms` : "—"}
+        </span>
       </div>
 
       <button
@@ -160,10 +197,15 @@ function ReactionGame() {
         className={`m-3 min-h-0 flex flex-1 select-none flex-col items-center justify-center rounded-3xl border border-border transition-colors duration-100 ${surface}`}
       >
         {phase === "ready" && (
-          <span className="font-display text-3xl font-bold tracking-[0.3em]">GET READY</span>
+          <span className="font-display text-3xl font-bold tracking-[0.3em]">
+            GET READY
+          </span>
         )}
         {phase === "countdown" && (
-          <span key={countdown} className="animate-pop font-display text-8xl font-bold tabular-nums">
+          <span
+            key={countdown}
+            className="animate-pop font-display text-8xl font-bold tabular-nums"
+          >
             {countdown}
           </span>
         )}
@@ -172,23 +214,31 @@ function ReactionGame() {
             <span className="font-display text-2xl font-bold tracking-[0.25em] text-muted-foreground">
               WAIT…
             </span>
-            <span className="mt-2 text-xs text-muted-foreground">Tap when it turns green</span>
+            <span className="mt-2 text-xs text-muted-foreground">
+              Tap when it turns green
+            </span>
           </>
         )}
         {phase === "go" && (
-          <span className="font-display text-6xl font-bold tracking-[0.2em]">TAP!</span>
+          <span className="font-display text-6xl font-bold tracking-[0.2em]">
+            TAP!
+          </span>
         )}
         {phase === "scored" && (
           <>
             <span className="font-display text-6xl font-bold tabular-nums text-primary">
               {lastMs}
             </span>
-            <span className="mt-1 text-sm text-muted-foreground">milliseconds</span>
+            <span className="mt-1 text-sm text-muted-foreground">
+              milliseconds
+            </span>
           </>
         )}
         {phase === "false" && (
           <>
-            <span className="font-display text-3xl font-bold tracking-[0.2em]">FALSE START</span>
+            <span className="font-display text-3xl font-bold tracking-[0.2em]">
+              FALSE START
+            </span>
             <span className="mt-2 text-sm opacity-80">Round penalised</span>
           </>
         )}
@@ -201,7 +251,11 @@ function ReactionGame() {
             <span
               key={i}
               className={`h-2 w-8 rounded-full ${
-                !r ? "bg-secondary" : r.falseStart ? "bg-destructive" : "bg-primary"
+                !r
+                  ? "bg-secondary"
+                  : r.falseStart
+                    ? "bg-destructive"
+                    : "bg-primary"
               }`}
             />
           );

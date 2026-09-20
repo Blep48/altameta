@@ -15,9 +15,17 @@ import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as MatchRouteImport } from './routes/match'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ResultRouteImport } from './routes/result'
+import { Route as ChallengeCodeRouteImport } from './routes/challenge.$code'
+import { Route as PlayDashRouteImport } from './routes/play.dash'
+import { Route as PlayDirectionRouteImport } from './routes/play.direction'
+import { Route as PlayFlappyRouteImport } from './routes/play.flappy'
+import { Route as PlayKnifeRouteImport } from './routes/play.knife'
+import { Route as PlayMemoryRouteImport } from './routes/play.memory'
+import { Route as PlayPenaltyRouteImport } from './routes/play.penalty'
 import { Route as PlayPrecisionRouteImport } from './routes/play.precision'
 import { Route as PlayReactionRouteImport } from './routes/play.reaction'
 import { Route as PlayRhythmRouteImport } from './routes/play.rhythm'
+import { Route as PlayStackRouteImport } from './routes/play.stack'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -49,6 +57,41 @@ const ResultRoute = ResultRouteImport.update({
   path: '/result',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChallengeCodeRoute = ChallengeCodeRouteImport.update({
+  id: '/challenge/$code',
+  path: '/challenge/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayDashRoute = PlayDashRouteImport.update({
+  id: '/play/dash',
+  path: '/play/dash',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayDirectionRoute = PlayDirectionRouteImport.update({
+  id: '/play/direction',
+  path: '/play/direction',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayFlappyRoute = PlayFlappyRouteImport.update({
+  id: '/play/flappy',
+  path: '/play/flappy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayKnifeRoute = PlayKnifeRouteImport.update({
+  id: '/play/knife',
+  path: '/play/knife',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayMemoryRoute = PlayMemoryRouteImport.update({
+  id: '/play/memory',
+  path: '/play/memory',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlayPenaltyRoute = PlayPenaltyRouteImport.update({
+  id: '/play/penalty',
+  path: '/play/penalty',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PlayPrecisionRoute = PlayPrecisionRouteImport.update({
   id: '/play/precision',
   path: '/play/precision',
@@ -64,6 +107,11 @@ const PlayRhythmRoute = PlayRhythmRouteImport.update({
   path: '/play/rhythm',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlayStackRoute = PlayStackRouteImport.update({
+  id: '/play/stack',
+  path: '/play/stack',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -72,9 +120,17 @@ export interface FileRoutesByFullPath {
   '/match': typeof MatchRoute
   '/profile': typeof ProfileRoute
   '/result': typeof ResultRoute
+  '/challenge/$code': typeof ChallengeCodeRoute
+  '/play/dash': typeof PlayDashRoute
+  '/play/direction': typeof PlayDirectionRoute
+  '/play/flappy': typeof PlayFlappyRoute
+  '/play/knife': typeof PlayKnifeRoute
+  '/play/memory': typeof PlayMemoryRoute
+  '/play/penalty': typeof PlayPenaltyRoute
   '/play/precision': typeof PlayPrecisionRoute
   '/play/reaction': typeof PlayReactionRoute
   '/play/rhythm': typeof PlayRhythmRoute
+  '/play/stack': typeof PlayStackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -83,9 +139,17 @@ export interface FileRoutesByTo {
   '/match': typeof MatchRoute
   '/profile': typeof ProfileRoute
   '/result': typeof ResultRoute
+  '/challenge/$code': typeof ChallengeCodeRoute
+  '/play/dash': typeof PlayDashRoute
+  '/play/direction': typeof PlayDirectionRoute
+  '/play/flappy': typeof PlayFlappyRoute
+  '/play/knife': typeof PlayKnifeRoute
+  '/play/memory': typeof PlayMemoryRoute
+  '/play/penalty': typeof PlayPenaltyRoute
   '/play/precision': typeof PlayPrecisionRoute
   '/play/reaction': typeof PlayReactionRoute
   '/play/rhythm': typeof PlayRhythmRoute
+  '/play/stack': typeof PlayStackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -95,9 +159,17 @@ export interface FileRoutesById {
   '/match': typeof MatchRoute
   '/profile': typeof ProfileRoute
   '/result': typeof ResultRoute
+  '/challenge/$code': typeof ChallengeCodeRoute
+  '/play/dash': typeof PlayDashRoute
+  '/play/direction': typeof PlayDirectionRoute
+  '/play/flappy': typeof PlayFlappyRoute
+  '/play/knife': typeof PlayKnifeRoute
+  '/play/memory': typeof PlayMemoryRoute
+  '/play/penalty': typeof PlayPenaltyRoute
   '/play/precision': typeof PlayPrecisionRoute
   '/play/reaction': typeof PlayReactionRoute
   '/play/rhythm': typeof PlayRhythmRoute
+  '/play/stack': typeof PlayStackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -108,9 +180,17 @@ export interface FileRouteTypes {
     | '/match'
     | '/profile'
     | '/result'
+    | '/challenge/$code'
+    | '/play/dash'
+    | '/play/direction'
+    | '/play/flappy'
+    | '/play/knife'
+    | '/play/memory'
+    | '/play/penalty'
     | '/play/precision'
     | '/play/reaction'
     | '/play/rhythm'
+    | '/play/stack'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -119,9 +199,17 @@ export interface FileRouteTypes {
     | '/match'
     | '/profile'
     | '/result'
+    | '/challenge/$code'
+    | '/play/dash'
+    | '/play/direction'
+    | '/play/flappy'
+    | '/play/knife'
+    | '/play/memory'
+    | '/play/penalty'
     | '/play/precision'
     | '/play/reaction'
     | '/play/rhythm'
+    | '/play/stack'
   id:
     | '__root__'
     | '/'
@@ -130,9 +218,17 @@ export interface FileRouteTypes {
     | '/match'
     | '/profile'
     | '/result'
+    | '/challenge/$code'
+    | '/play/dash'
+    | '/play/direction'
+    | '/play/flappy'
+    | '/play/knife'
+    | '/play/memory'
+    | '/play/penalty'
     | '/play/precision'
     | '/play/reaction'
     | '/play/rhythm'
+    | '/play/stack'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -142,9 +238,17 @@ export interface RootRouteChildren {
   MatchRoute: typeof MatchRoute
   ProfileRoute: typeof ProfileRoute
   ResultRoute: typeof ResultRoute
+  ChallengeCodeRoute: typeof ChallengeCodeRoute
+  PlayDashRoute: typeof PlayDashRoute
+  PlayDirectionRoute: typeof PlayDirectionRoute
+  PlayFlappyRoute: typeof PlayFlappyRoute
+  PlayKnifeRoute: typeof PlayKnifeRoute
+  PlayMemoryRoute: typeof PlayMemoryRoute
+  PlayPenaltyRoute: typeof PlayPenaltyRoute
   PlayPrecisionRoute: typeof PlayPrecisionRoute
   PlayReactionRoute: typeof PlayReactionRoute
   PlayRhythmRoute: typeof PlayRhythmRoute
+  PlayStackRoute: typeof PlayStackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -191,6 +295,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResultRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/challenge/$code': {
+      id: '/challenge/$code'
+      path: '/challenge/$code'
+      fullPath: '/challenge/$code'
+      preLoaderRoute: typeof ChallengeCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/dash': {
+      id: '/play/dash'
+      path: '/play/dash'
+      fullPath: '/play/dash'
+      preLoaderRoute: typeof PlayDashRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/direction': {
+      id: '/play/direction'
+      path: '/play/direction'
+      fullPath: '/play/direction'
+      preLoaderRoute: typeof PlayDirectionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/flappy': {
+      id: '/play/flappy'
+      path: '/play/flappy'
+      fullPath: '/play/flappy'
+      preLoaderRoute: typeof PlayFlappyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/knife': {
+      id: '/play/knife'
+      path: '/play/knife'
+      fullPath: '/play/knife'
+      preLoaderRoute: typeof PlayKnifeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/memory': {
+      id: '/play/memory'
+      path: '/play/memory'
+      fullPath: '/play/memory'
+      preLoaderRoute: typeof PlayMemoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/play/penalty': {
+      id: '/play/penalty'
+      path: '/play/penalty'
+      fullPath: '/play/penalty'
+      preLoaderRoute: typeof PlayPenaltyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/play/precision': {
       id: '/play/precision'
       path: '/play/precision'
@@ -212,6 +365,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlayRhythmRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/play/stack': {
+      id: '/play/stack'
+      path: '/play/stack'
+      fullPath: '/play/stack'
+      preLoaderRoute: typeof PlayStackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -222,9 +382,17 @@ const rootRouteChildren: RootRouteChildren = {
   MatchRoute: MatchRoute,
   ProfileRoute: ProfileRoute,
   ResultRoute: ResultRoute,
+  ChallengeCodeRoute: ChallengeCodeRoute,
+  PlayDashRoute: PlayDashRoute,
+  PlayDirectionRoute: PlayDirectionRoute,
+  PlayFlappyRoute: PlayFlappyRoute,
+  PlayKnifeRoute: PlayKnifeRoute,
+  PlayMemoryRoute: PlayMemoryRoute,
+  PlayPenaltyRoute: PlayPenaltyRoute,
   PlayPrecisionRoute: PlayPrecisionRoute,
   PlayReactionRoute: PlayReactionRoute,
   PlayRhythmRoute: PlayRhythmRoute,
+  PlayStackRoute: PlayStackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
