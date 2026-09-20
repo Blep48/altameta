@@ -62,6 +62,7 @@ export const localMatchmaking: MatchmakingService = {
         resolve({
           id: `m_${Date.now().toString(36)}`,
           gameId,
+          mode: "duel",
           opponent: createBotOpponent(playerRating, peak),
           startedAt: Date.now(),
           seed: (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0,
