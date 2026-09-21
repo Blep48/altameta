@@ -235,7 +235,10 @@ function Home() {
               RESUME LADDER
             </Link>
             {ladder.streak > 0 && (
-              <button onClick={cashOutLadder} className="mt-3 text-primary">
+              <button
+                onClick={() => void cashOutLadder().catch(() => {})}
+                className="mt-3 text-primary"
+              >
                 CASH OUT
               </button>
             )}

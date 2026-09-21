@@ -18,7 +18,6 @@ export const MINIGAMES: MinigameMeta[] = [
   { id: "direction", name: "DIRECTION", tagline: "Swipe the falling arrows in order. One mistake and you’re out.", icon: "🧭", available: true },
   { id: "memory", name: "MONKEY TEST", tagline: "Memorize the numbered squares, then tap them in order.", icon: "🐒", available: true },
   { id: "flappy", name: "FLAPPY", tagline: "Tap to fly through a fresh seeded obstacle course.", icon: "🐤", available: true },
-  { id: "dash", name: "DINO RUN", tagline: "Jump and fast-fall through a seeded endless obstacle run.", icon: "🦖", available: true },
   { id: "stack", name: "STACK", tagline: "Drop moving blocks and build the tallest tower.", icon: "🧱", available: true },
   { id: "knife", name: "KNIFE IT", tagline: "Throw knives into the spinning target without hitting another blade.", icon: "🔪", available: true },
   {

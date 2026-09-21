@@ -26,7 +26,6 @@ const RULES: Record<string, string> = {
     "Press STOP while the moving marker is inside the target. The inner zone scores double. One miss ends the duel.",
   flappy:
     "Tap anywhere to flap upward and pass through the gaps. Touching a pipe, ceiling or floor ends the run. Every match generates a new course from its seed.",
-  dash: "Run automatically through a seeded obstacle course. Use JUMP to clear obstacles and FAST FALL to slam back to the ground quickly. The speed increases as your score rises.",
   stack:
     "Tap to drop each moving block. Only the overlapping part survives. Miss completely and your run ends.",
   knife:
@@ -36,8 +35,7 @@ const RULES: Record<string, string> = {
 function GameSelection() {
   useEffect(() => startMusic("menu"), []);
   const navigate = useNavigate();
-  const { ready, profile, wagerEur, setWagerEur, reserveFriendWager } =
-    useDuel();
+  const { ready, profile, wagerEur, setWagerEur } = useDuel();
   const [selected, setSelected] = useState<MinigameMeta | null>(null);
   const [creating, setCreating] = useState(false);
   const [friendPayment, setFriendPayment] = useState<"demo" | "in_person">(
@@ -82,6 +80,11 @@ function GameSelection() {
           </p>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             {RULES[selected.id]}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Online play · 110 seconds maximum. Disconnecting after the game
+            starts forfeits the run. Timing follows the server, so connection
+            latency matters.
           </p>
         </section>
         <section className="mt-4 rounded-2xl border border-border bg-card p-4">
@@ -159,11 +162,6 @@ function GameSelection() {
                 name: profile.username,
                 avatar: profile.avatar,
               });
-              if (
-                friendPayment === "demo" &&
-                !reserveFriendWager(ch.code, wagerEur)
-              )
-                throw new Error("Not enough demo balance");
               const url = `${window.location.origin}/challenge/${ch.code}`;
               setFriendSession({
                 expiresAt: ch.expires_at,
@@ -330,15 +328,6 @@ function GamePreview({ id }: { id: string }) {
         </span>
         <span className="absolute right-3 top-0 h-4 w-2 bg-primary" />
         <span className="absolute right-3 bottom-0 h-4 w-2 bg-primary" />
-      </span>
-    );
-  if (id === "dash")
-    return (
-      <span className={b}>
-        <span className="absolute bottom-1 left-2 inline-block -scale-x-100 text-xl">
-          🦖
-        </span>
-        <span className="absolute bottom-1 right-2 text-xl">🌵</span>
       </span>
     );
   if (id === "stack")

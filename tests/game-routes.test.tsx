@@ -1,32 +1,143 @@
-import { beforeEach,afterEach,it,expect,vi } from "vitest";
-import { render,fireEvent,act,cleanup,screen } from "@testing-library/react";
-import type { ComponentType } from "react";
-const mocks=vi.hoisted(()=>({navigate:vi.fn(),finish:vi.fn(),duel:{activeMatch:{id:"x",gameId:"dash",mode:"duel",entryCharged:true,wagerEur:1,seed:1,opponent:{id:"bot",username:"BOT",rating:1200,meanReactionMs:250,varianceMs:20}},ready:true,profile:{coins:9900},wagerEur:1,ladder:null}}));
-vi.mock("@tanstack/react-router",()=>({createFileRoute:()=> (options:unknown)=>({options}),useNavigate:()=>mocks.navigate}));
-vi.mock("@/lib/duel/provider",()=>({useDuel:()=>({...mocks.duel,finishMatch:mocks.finish,finishSurvivalMatch:mocks.finish})}));
-vi.mock("@/components/duel/OpponentOutBanner",()=>({OpponentOutBanner:()=>null}));
-vi.mock("@/lib/duel/audio",()=>({startMusic:()=>()=>{},sfx:{miss:vi.fn(),tap:vi.fn(),go:vi.fn(),win:vi.fn(),lose:vi.fn(),countdown:vi.fn(),falseStart:vi.fn()}}));
-vi.mock("@/lib/duel/engine/survival",()=>({createObstacleFeed:()=>[{index:239,x:-1000,size:8,gapY:50,gap:30}],simulateSurvivalOpponent:()=>0}));
-import { Route as ReactionRoute } from "../src/routes/play.reaction";
-import { Route as DinoRoute } from "../src/routes/play.dash";
-import { Route as FlappyRoute } from "../src/routes/play.flappy";
-beforeEach(()=>{
- vi.useFakeTimers();mocks.finish.mockReset();mocks.finish.mockReturnValue({won:true});mocks.navigate.mockReset();
- vi.spyOn(Math,"random").mockReturnValue(0);
- vi.stubGlobal("ResizeObserver",class {observe(){}disconnect(){}});
- vi.spyOn(HTMLElement.prototype,"getBoundingClientRect").mockReturnValue({width:390,height:600,x:0,y:0,top:0,left:0,bottom:600,right:390,toJSON(){return {}}});
- vi.spyOn(HTMLCanvasElement.prototype,"getContext").mockReturnValue({setTransform:vi.fn(),clearRect:vi.fn(),fillRect:vi.fn(),save:vi.fn(),restore:vi.fn(),translate:vi.fn(),beginPath:vi.fn(),arc:vi.fn(),fill:vi.fn(),moveTo:vi.fn(),lineTo:vi.fn()} as never);
+import { afterEach, beforeEach, it, expect, vi } from "vitest";
+import {
+  render,
+  fireEvent,
+  cleanup,
+  screen,
+  waitFor,
+  act,
+} from "@testing-library/react";
+import { ServerArena } from "../src/components/duel/ServerArena";
+import { createEngine } from "../supabase/functions/_shared/arena-engine";
+const mocks = vi.hoisted(() => ({
+  navigate: vi.fn(),
+  publish: vi.fn(),
+  call: vi.fn(),
+}));
+vi.mock("@tanstack/react-router", () => ({
+  useNavigate: () => mocks.navigate,
+}));
+vi.mock("@/lib/account/client", () => ({
+  SUPABASE_URL: "https://test.invalid",
+  supabase: {
+    auth: {
+      getSession: async () => ({
+        data: { session: { access_token: "test-token" } },
+      }),
+    },
+  },
+}));
+vi.mock("@/lib/duel/provider", () => ({
+  useDuel: () => ({
+    activeMatch: {
+      id: "match-test",
+      gameId: "stack",
+      opponent: { username: "BOT" },
+    },
+    profile: { coins: 9900 },
+    wagerEur: 1,
+    ready: true,
+  }),
+}));
+vi.mock("@/lib/duel/arena-client", () => ({
+  publishArenaView: mocks.publish,
+  arenaCall: mocks.call,
+}));
+vi.mock("@/lib/duel/audio", () => ({
+  startMusic: () => () => {},
+  sfx: { tap: vi.fn(), win: vi.fn(), lose: vi.fn() },
+}));
+class FakeSocket {
+  static OPEN = 1;
+  static instance: FakeSocket;
+  readyState = 1;
+  onopen: (() => void) | null = null;
+  onmessage: ((e: { data: string }) => void) | null = null;
+  onclose: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  sent: Record<string, unknown>[] = [];
+  constructor() {
+    FakeSocket.instance = this;
+  }
+  send(data: string) {
+    this.sent.push(JSON.parse(data));
+  }
+  close() {
+    this.readyState = 3;
+  }
+  receive(data: unknown) {
+    this.onmessage?.({ data: JSON.stringify(data) });
+  }
+}
+beforeEach(() => {
+  vi.stubGlobal("WebSocket", FakeSocket);
+  vi.stubGlobal("requestAnimationFrame", () => 1);
+  vi.stubGlobal("cancelAnimationFrame", () => {});
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+    setTransform: vi.fn(),
+  } as never);
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+    width: 390,
+    height: 600,
+    left: 0,
+    top: 0,
+  } as DOMRect);
+  HTMLElement.prototype.setPointerCapture = vi.fn();
+  mocks.navigate.mockReset();
+  mocks.publish.mockReset();
 });
-afterEach(()=>{cleanup();vi.useRealTimers();vi.unstubAllGlobals()});
-it("Reaction does not turn green from a cancelled round",()=>{
- const Game=ReactionRoute.options.component as ComponentType;render(<Game/>);
- act(()=>vi.advanceTimersByTime(3300));expect(screen.getByText("WAIT…")).toBeTruthy();
- fireEvent.pointerDown(screen.getByRole("button"));expect(screen.getByText("FALSE START")).toBeTruthy();
- act(()=>vi.advanceTimersByTime(1500));expect(screen.getByText("WAIT…")).toBeTruthy();
- act(()=>vi.advanceTimersByTime(1200));expect(screen.getByText("TAP!")).toBeTruthy();
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
-it.each([["Dino",DinoRoute],["Flappy",FlappyRoute]])("%s finishes when the final obstacle has been cleared",(_,route)=>{
- const Game=route.options.component as ComponentType;render(<Game/>);
- act(()=>vi.advanceTimersByTime(20));expect(mocks.finish).toHaveBeenCalledExactlyOnceWith({playerScore:1,opponentScore:0});
- act(()=>vi.advanceTimersByTime(1000));expect(mocks.navigate).toHaveBeenCalledWith({to:"/result"});
+it("sends ordered controls without a score or browser timestamp", async () => {
+  render(<ServerArena game="stack" />);
+  await waitFor(() => expect(FakeSocket.instance.onopen).toBeTruthy());
+  const ws = FakeSocket.instance;
+  act(() => ws.onopen?.());
+  expect(ws.sent[0]).toEqual({ token: "test-token", matchId: "match-test" });
+  act(() =>
+    ws.receive({
+      matchId: "match-test",
+      engine: createEngine("stack", 1, Date.now()),
+      seq: 0,
+      serverTime: Date.now(),
+    }),
+  );
+  fireEvent.pointerDown(screen.getByRole("application"), {
+    clientX: 100,
+    clientY: 100,
+  });
+  expect(ws.sent.at(-1)).toEqual({ seq: 1, input: "tap" });
+  expect(mocks.publish).not.toHaveBeenCalled();
+  expect(mocks.navigate).not.toHaveBeenCalled();
+});
+it("opens the result only after the server commits it", async () => {
+  render(<ServerArena game="stack" />);
+  await waitFor(() => expect(FakeSocket.instance.onopen).toBeTruthy());
+  const ws = FakeSocket.instance,
+    s = createEngine("stack", 1, 0);
+  s.done = true;
+  s.score = 10;
+  act(() =>
+    ws.receive({ matchId: "match-test", engine: s, seq: 1, serverTime: 10 }),
+  );
+  expect(mocks.navigate).not.toHaveBeenCalled();
+  const result = {
+    committed: true,
+    activeMatch: null,
+    lastOutcome: { won: true },
+    revision: 3,
+  };
+  act(() => ws.receive(result));
+  expect(mocks.publish).toHaveBeenCalledWith(result);
+  expect(mocks.navigate).toHaveBeenCalledWith({ to: "/result" });
 });

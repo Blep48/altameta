@@ -9,42 +9,23 @@ import {
   setFriendSession,
   type FriendChallenge,
 } from "@/lib/duel/friend-challenges";
-import { getPendingScore, retryPendingScore } from "@/lib/duel/pending-score";
 import { MINIGAMES } from "@/lib/duel/games";
 export const Route = createFileRoute("/challenge/$code")({
   component: Challenge,
 });
 function Challenge() {
   const { code } = Route.useParams(),
-    {
-      ready,
-      profile,
-      reserveFriendWager,
-      settleFriendChallenge,
-      releaseFriendWager,
-      leaveGame,
-    } = useDuel(),
+    { ready, profile, leaveGame } = useDuel(),
     nav = useNavigate();
   const [c, setC] = useState<FriendChallenge | null>(null),
     [loading, setLoading] = useState(true),
     [err, setErr] = useState(""),
     [now, setNow] = useState(Date.now());
-  const [retrying, setRetrying] = useState(false);
   const [accepting, setAccepting] = useState(false);
   const acceptLock = useRef(false);
   useEffect(() => {
     if (ready) leaveGame();
   }, [ready, leaveGame]);
-  const pending = getPendingScore(code);
-  const retry = async () => {
-    setRetrying(true);
-    const ok = await retryPendingScore(code);
-    setRetrying(false);
-    if (ok) {
-      setC(await getFriendChallenge(code));
-      setErr("");
-    } else setErr("Score saved. Check your connection and retry.");
-  };
   useEffect(() => {
     let live = true;
     let busy = false;
@@ -77,17 +58,6 @@ function Challenge() {
       clearInterval(poll);
     };
   }, [code]);
-  useEffect(() => {
-    const session = getFriendSession(code);
-    if (
-      ready &&
-      c &&
-      session?.code === code &&
-      c.creator_score != null &&
-      c.guest_score != null
-    )
-      settleFriendChallenge(c, session.role);
-  }, [ready, c, code, settleFriendChallenge]);
   if (loading || !ready)
     return (
       <Screen>
@@ -104,14 +74,6 @@ function Challenge() {
         <p className="mt-20 text-center text-destructive">
           {err || "Challenge not found or expired."}
         </p>
-        {pending && (
-          <button
-            disabled={retrying}
-            onClick={() => void retry().catch(() => setRetrying(false))}
-          >
-            Score saved · retry upload
-          </button>
-        )}
       </Screen>
     );
   const session = getFriendSession(code),
@@ -123,19 +85,7 @@ function Challenge() {
     s = Math.floor((left % 60000) / 1000),
     game = MINIGAMES.find((g) => g.id === c.game_id),
     both = c.creator_score != null && c.guest_score != null;
-  let winner: "creator" | "guest" | "tie" | null = null;
-  if (both) {
-    winner =
-      c.creator_score === c.guest_score
-        ? "tie"
-        : c.score_mode === "low"
-          ? c.creator_score! < c.guest_score!
-            ? "creator"
-            : "guest"
-          : c.creator_score! > c.guest_score!
-            ? "creator"
-            : "guest";
-  }
+  const winner = c.winner;
   const myWon = winner && winner !== "tie" && mine?.role === winner;
   const accept = async () => {
     if (acceptLock.current) return;
@@ -146,8 +96,6 @@ function Challenge() {
         setErr("Not enough demo balance for this challenge.");
         return;
       }
-      if (c.payment_mode === "demo" && !reserveFriendWager(code, c.wager_eur))
-        throw new Error("Not enough demo balance");
       const joined = await joinFriendChallenge(
         code,
         profile.username,
@@ -166,7 +114,6 @@ function Challenge() {
         search: { game: c.game_id, friend: code, ladder: "" },
       });
     } catch (error) {
-      if (!getFriendSession(code)) releaseFriendWager(code);
       setErr(
         error instanceof Error ? error.message : "Unable to accept challenge",
       );
@@ -183,23 +130,6 @@ function Challenge() {
   return (
     <Screen>
       <TopBar title="FRIEND CHALLENGE" back="/" />
-      {pending && (
-        <div role="status" className="rounded-xl border border-primary p-4">
-          <p>Your score ({pending.score}) is saved on this device.</p>
-          <button
-            disabled={retrying}
-            onClick={() =>
-              void retry().catch(() => {
-                setRetrying(false);
-                setErr("Connection unavailable");
-              })
-            }
-            className="mt-2 rounded bg-primary p-3 text-primary-foreground"
-          >
-            {retrying ? "SENDING…" : "RETRY SCORE UPLOAD"}
-          </button>
-        </div>
-      )}
       <div className="mt-5 rounded-3xl border border-primary/40 bg-card p-5 text-center">
         <div className="text-5xl">{game?.icon ?? "🎮"}</div>
         <h1 className="mt-2 font-display text-2xl font-black tracking-[.18em]">
@@ -251,7 +181,6 @@ function Challenge() {
         <p className="mt-3 text-center text-xs text-destructive">{err}</p>
       )}
       {!expired &&
-        !pending &&
         !both &&
         mine &&
         ((mine.role === "creator" && c.creator_score == null) ||

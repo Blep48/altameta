@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Screen } from "@/components/duel/Screen";
 import { useDuel } from "@/lib/duel/provider";
 import { resetGameTrack, sfx, startMusic } from "@/lib/duel/audio";
-import { getPendingScore } from "@/lib/duel/pending-score";
 import type { ActiveMatch } from "@/lib/duel/types";
 import {
   getFriendChallenge,
@@ -70,14 +69,6 @@ function Matchmaking() {
       const session = friendMode
         ? getFriendSession(friendMode === "1" ? undefined : friendMode)
         : null;
-      if (session && getPendingScore(session.code)) {
-        handedOff = true;
-        void navigate({
-          to: "/challenge/$code",
-          params: { code: session.code },
-        });
-        return;
-      }
       const matching =
         ladderMode === "start"
           ? startLadder(game)
@@ -116,7 +107,10 @@ function Matchmaking() {
                 : findMatch(game);
       void matching
         .then((match) => {
-          if (!live) return;
+          if (!live) {
+            cancelMatch();
+            return;
+          }
           setFound(match);
           sfx.go();
           navigation = setTimeout(() => {
@@ -129,7 +123,6 @@ function Matchmaking() {
               direction: "/play/direction",
               memory: "/play/memory",
               flappy: "/play/flappy",
-              dash: "/play/dash",
               stack: "/play/stack",
               knife: "/play/knife",
             } as const;

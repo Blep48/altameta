@@ -27,7 +27,7 @@ export const Route = createFileRoute("/profile")({
 
 function Profile() {
   const login = useAccount();
-  const { profile, history, updateProfile, resetProgress } = useDuel();
+  const { profile, history, updateProfile } = useDuel();
   const scores = highScores(profile.highscores ?? {}, history);
 
   return (
@@ -90,14 +90,14 @@ function Profile() {
           value={`${winRate(profile)}%`}
           accent="accent"
         />
-        <StatTile label="Games played" value={profile.gamesPlayed} />
+        <StatTile label="Verified games" value={profile.gamesPlayed} />
         <StatTile label="Wins" value={profile.wins} accent="primary" />
         <StatTile label="Losses" value={profile.losses} accent="destructive" />
       </section>
 
       <section className="mt-6">
         <h2 className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-          Highscores
+          Verified highscores
         </h2>
         <div className="mt-3 grid grid-cols-2 gap-3">
           {scores.map((s) => (
@@ -106,24 +106,10 @@ function Profile() {
         </div>
       </section>
 
-      <button
-        type="button"
-        onClick={() => {
-          if (
-            confirm(
-              "Reset profile, stats and balance to a a fresh €100.00 demo balance?",
-            )
-          ) {
-            resetProgress();
-          }
-        }}
-        className="mt-8 rounded-2xl border border-destructive/50 py-3 text-sm font-semibold text-destructive"
-      >
-        Reset demo progress
-      </button>
       <p className="mt-3 text-center text-[11px] text-muted-foreground">
-        Demo balance only. No deposits, withdrawals or real-money transactions
-        are enabled.
+        Server-verified demo season. Earlier demo progress is archived
+        separately. No deposits, withdrawals or real-money transactions are
+        enabled.
       </p>
       {login && (
         <button
@@ -148,7 +134,6 @@ function highScores(
     ["direction", "DIRECTION"],
     ["memory", "MONKEY TEST"],
     ["flappy", "FLAPPY"],
-    ["dash", "DINO RUN"],
     ["stack", "STACK"],
     ["knife", "KNIFE IT"],
     ["precision", "PRECISION"],

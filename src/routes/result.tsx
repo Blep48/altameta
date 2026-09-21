@@ -54,6 +54,19 @@ function Result() {
   }, [ready, lastOutcome, navigate]);
 
   const won = lastOutcome?.won ?? false;
+  const tied = lastOutcome?.tied ?? false;
+  const scoreUnit =
+    (
+      {
+        rhythm: "notes",
+        direction: "arrows",
+        memory: "levels",
+        precision: "points",
+        flappy: "pipes",
+        stack: "blocks",
+        knife: "knives",
+      } as Record<string, string>
+    )[lastOutcome?.gameId ?? ""] ?? "points";
   const rhythm = lastOutcome?.rhythm;
   const precision = lastOutcome?.precision;
   const direction = lastOutcome?.direction;
@@ -206,41 +219,57 @@ function Result() {
             won ? "text-primary text-glow" : "text-destructive"
           }`}
         >
-          {won
-            ? ladderMatch
-              ? ladderCelebrationName(lastOutcome.ladderStreak ?? 1)
-              : "ALTAMETA"
-            : "BASSAMETA"}
+          {tied
+            ? "TIE"
+            : won
+              ? ladderMatch
+                ? ladderCelebrationName(lastOutcome.ladderStreak ?? 1)
+                : "ALTAMETA"
+              : "BASSAMETA"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          {won
+          {tied
             ? ladderMatch
-              ? `${ladderMultiplier(lastOutcome.ladderStreak ?? 1).toFixed(1)}× LADDER MULTIPLIER`
-              : "You took the duel."
-            : "Opponent takes this one."}
+              ? "Same streak. Your ladder continues."
+              : "Equal scores. Your stake was returned."
+            : won
+              ? ladderMatch
+                ? `${ladderMultiplier(lastOutcome.ladderStreak ?? 1).toFixed(1)}× LADDER MULTIPLIER`
+                : "You took the duel."
+              : "Opponent takes this one."}
         </p>
       </div>
 
       <div className="mt-5 text-center">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-          {ladderMatch
-            ? won
-              ? `Ladder cash out · ${lastOutcome.ladderStreak} win${lastOutcome.ladderStreak === 1 ? "" : "s"}`
-              : "Ladder run lost"
-            : won
-              ? "Winnings"
-              : "Lost"}
+          {tied
+            ? ladderMatch
+              ? "Ladder preserved"
+              : "Stake returned"
+            : ladderMatch
+              ? won
+                ? `Ladder cash out · ${lastOutcome.ladderStreak} win${lastOutcome.ladderStreak === 1 ? "" : "s"}`
+                : "Ladder run lost"
+              : won
+                ? "Winnings"
+                : "Lost"}
         </p>
         <p
           className={`mt-2 font-display text-6xl font-black tabular-nums transition-transform ${won ? "text-primary text-glow" : "text-destructive"}`}
         >
-          {ladderMatch
-            ? won
-              ? formatEuro(animatedWin)
-              : formatEuro(-lastOutcome.wagerEur * 100, true)
-            : won
-              ? formatEuro(animatedWin, true)
-              : formatEuro(lastOutcome.coinDelta, true)}
+          {tied
+            ? formatEuro(
+                ladderMatch
+                  ? (lastOutcome.ladderPrizeUnits ?? 0)
+                  : lastOutcome.wagerEur * 100,
+              )
+            : ladderMatch
+              ? won
+                ? formatEuro(animatedWin)
+                : formatEuro(-lastOutcome.wagerEur * 100, true)
+              : won
+                ? formatEuro(animatedWin, true)
+                : formatEuro(lastOutcome.coinDelta, true)}
         </p>
       </div>
 
@@ -280,7 +309,7 @@ function Result() {
                       ? `${rhythm.opponentNotes}`
                       : `${lastOutcome.opponentAvgMs} ms`
           }
-          highlight={!won}
+          highlight={!won && !tied}
         />
       </section>
       {(rhythm || precision || direction || monkey || survival) && (
@@ -292,7 +321,7 @@ function Result() {
                 ? "Blocks stacked"
                 : lastOutcome.gameId === "flappy"
                   ? "Pipes cleared"
-                  : "Obstacles cleared"
+                  : `${scoreUnit} scored`
             : monkey
               ? "Levels cleared"
               : direction
@@ -323,7 +352,7 @@ function Result() {
       <p className="mt-3 text-center text-xs text-muted-foreground tabular-nums">
         Balance {formatEuro(profile.coins)} · Rating {profile.rating}
         {survival
-          ? ` · ${survival.playerScore} ${lastOutcome.gameId === "knife" ? "knives" : lastOutcome.gameId === "stack" ? "blocks" : lastOutcome.gameId === "flappy" ? "pipes" : "obstacles"} · Opponent ${survival.opponentScore} · Seed #${survival.seed.toString(36).slice(-6)}`
+          ? ` · ${survival.playerScore} ${scoreUnit} · Opponent ${survival.opponentScore} · Seed #${survival.seed.toString(36).slice(-6)}`
           : monkey
             ? ` · ${monkey.playerLevels} levels · Opponent ${monkey.opponentLevels}`
             : direction
@@ -370,7 +399,7 @@ function Result() {
 
       {ladderMatch && ladder && lastOutcome.gameId === ladder.gameId && (
         <section className="mt-7 rounded-3xl border border-primary/60 bg-primary/10 p-5 text-center">
-          {ladder.active && won ? (
+          {ladder.active && (won || tied) ? (
             <>
               <p className="text-[10px] font-bold uppercase tracking-[.25em] text-primary">
                 ∞ THE LADDER · STREAK {ladder.streak}
@@ -408,11 +437,15 @@ function Result() {
               </button>
               <button
                 type="button"
-                onClick={() => {
+                onClick={async () => {
                   const amount = ladderPrizeUnits(ladder);
                   const streak = ladder.streak;
                   const eliminations = ladderEliminations(streak);
-                  cashOutLadder();
+                  try {
+                    await cashOutLadder();
+                  } catch {
+                    return;
+                  }
                   setCashout({ amount, streak, eliminations });
                 }}
                 className="mt-2 w-full rounded-2xl border border-primary py-4 font-display text-sm font-black tracking-[.16em] text-primary"

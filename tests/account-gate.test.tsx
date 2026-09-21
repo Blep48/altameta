@@ -8,7 +8,8 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { AccountGate, useAccount } from "../src/components/duel/AccountGate";
-import { DuelProvider, useDuel } from "../src/lib/duel/provider";
+import { useState } from "react";
+import { accountStorage } from "../src/lib/account/store";
 import { newAccount } from "../src/lib/duel/ledger";
 import { createDefaultProfile } from "../src/lib/duel/player";
 import { bindAccount } from "../src/lib/account/store";
@@ -50,14 +51,21 @@ vi.mock("../src/lib/duel/audio", () => ({
   setMuted: vi.fn(),
 }));
 function Probe() {
-  const { profile, updateProfile } = useDuel();
+  const [muted, setMuted] = useState(
+    () => accountStorage.getItem("duel:muted") ?? "false",
+  );
   const auth = useAccount();
   return (
     <div>
-      <output data-testid="balance">{profile.coins}</output>
-      <output data-testid="name">{profile.username}</output>
-      <button onClick={() => updateProfile({ coins: profile.coins + 90 })}>
-        Win
+      <output data-testid="muted">{muted}</output>
+      <output data-testid="name">{auth?.username}</output>
+      <button
+        onClick={() => {
+          accountStorage.setItem("duel:muted", "true");
+          setMuted("true");
+        }}
+      >
+        Mute
       </button>
       <button onClick={() => void auth?.logout()}>Logout</button>
     </div>
@@ -66,9 +74,7 @@ function Probe() {
 const mount = () =>
   render(
     <AccountGate>
-      <DuelProvider>
-        <Probe />
-      </DuelProvider>
+      <Probe />
     </AccountGate>,
   );
 beforeEach(() => {
@@ -86,7 +92,7 @@ beforeEach(() => {
   });
   mocks.read.mockResolvedValue({
     data: {
-      state: { "duel:account:v1": JSON.stringify(account) },
+      state: { "duel:muted": "false" },
       revision: 7,
       username: "alice",
     },
@@ -103,14 +109,14 @@ afterEach(() => {
   bindAccount(null);
   localStorage.clear();
 });
-it("loads the cloud balance instead of a guest balance and saves progress before logout", async () => {
+it("loads account preferences and flushes them before logout", async () => {
   localStorage.setItem(
     "duel:account:v1",
     JSON.stringify(newAccount(createDefaultProfile())),
   );
   mount();
   await waitFor(() =>
-    expect(screen.getByTestId("balance").textContent).toBe("12345"),
+    expect(screen.getByTestId("muted").textContent).toBe("false"),
   );
   expect(screen.getByTestId("name").textContent).toBe("alice");
   let complete!: (result: unknown) => void;
@@ -120,35 +126,33 @@ it("loads the cloud balance instead of a guest balance and saves progress before
         complete = resolve;
       }),
   );
-  fireEvent.click(screen.getByText("Win"));
+  fireEvent.click(screen.getByText("Mute"));
   fireEvent.click(screen.getByText("Logout"));
   await waitFor(() => expect(mocks.save).toHaveBeenCalledOnce());
   expect(mocks.logout).not.toHaveBeenCalled();
   const args = mocks.save.mock.calls[0]![1];
   expect(args.expected_revision).toBe(7);
-  expect(JSON.parse(args.next_state["duel:account:v1"]).profile.coins).toBe(
-    12435,
-  );
+  expect(args.next_state["duel:muted"]).toBe("true");
   await act(async () => complete({ data: [{ revision: 8 }], error: null }));
   await screen.findByText("LOG IN");
   expect(mocks.logout).toHaveBeenCalledOnce();
 });
-it("shows a save failure and retries without resetting the local balance", async () => {
+it("shows a preferences save failure and retries without resetting them", async () => {
   mocks.save
     .mockResolvedValueOnce({ data: null, error: new Error("Offline") })
     .mockResolvedValue({ data: [{ revision: 8 }], error: null });
   mount();
   await waitFor(() =>
-    expect(screen.getByTestId("balance").textContent).toBe("12345"),
+    expect(screen.getByTestId("muted").textContent).toBe("false"),
   );
-  fireEvent.click(screen.getByText("Win"));
+  fireEvent.click(screen.getByText("Mute"));
   await screen.findByText("Progress not synced");
-  expect(screen.getByTestId("balance").textContent).toBe("12435");
+  expect(screen.getByTestId("muted").textContent).toBe("true");
   fireEvent.click(screen.getByText("Retry"));
   await waitFor(() =>
     expect(screen.queryByText("Progress not synced")).toBeNull(),
   );
-  expect(screen.getByTestId("balance").textContent).toBe("12435");
+  expect(screen.getByTestId("muted").textContent).toBe("true");
 });
 it("registers with just username and password and then signs in", async () => {
   mocks.user = null;

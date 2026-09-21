@@ -1,8 +1,7 @@
 import { accountStorage, accountKeys, accountScope } from "../account/store";
-const URL =
-  "https://uhazmkzewagtalbyzgcj.supabase.co/functions/v1/friend-challenge";
-const KEY = "sb_publishable_Onsx-GUCZWzWmb93TsMbwQ_5hfJJCw3";
+import { arenaCall } from "./arena-client";
 export interface FriendChallenge {
+  winner: "creator" | "guest" | "tie" | null;
   id: string;
   code: string;
   game_id: string;
@@ -28,20 +27,27 @@ export interface FriendSession {
   role: "creator" | "guest";
   seed: number;
 }
-async function call(body: unknown) {
-  const r = await fetch(URL, {
-    method: "POST",
-    headers: { apikey: KEY, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(12000),
-  });
-  const j = await r.json();
-  if (!r.ok)
+async function call(body: { action: string; [key: string]: unknown }) {
+  const { action, ...fields } = body;
+  let result;
+  try {
+    result = await arenaCall(action, fields);
+  } catch (e) {
     throw new FriendChallengeError(
-      j.error || "Friend challenge error",
-      r.status,
+      e instanceof Error ? e.message : "Unavailable",
+      (e as { status?: number }).status ?? 503,
     );
-  return j;
+  }
+  const c = result.challenge;
+  if (c?.role)
+    setFriendSession({
+      code: c.code,
+      token: "account",
+      role: c.role,
+      seed: c.seed,
+      expiresAt: c.expires_at,
+    });
+  return { challenge: c, token: "account", winner: c?.winner ?? null };
 }
 export class FriendChallengeError extends Error {
   constructor(
@@ -91,7 +97,12 @@ export async function createFriendChallenge(i: {
   name: string;
   avatar: string;
 }) {
-  return call({ action: "create", ...i }) as Promise<{
+  return call({
+    action: "create",
+    gameId: i.gameId,
+    wagerEur: i.wagerEur,
+    paymentMode: i.paymentMode,
+  }) as Promise<{
     challenge: FriendChallenge;
     token: string;
   }>;
@@ -105,20 +116,20 @@ export async function joinFriendChallenge(
   name: string,
   avatar: string,
 ) {
-  return call({ action: "join", code, name, avatar }) as Promise<{
+  return call({ action: "join", code }) as Promise<{
     challenge: FriendChallenge;
     token: string;
   }>;
 }
 export async function submitFriendScore(
-  code: string,
-  token: string,
-  score: number,
-) {
-  return call({ action: "submit", code, token, score }) as Promise<{
-    challenge: FriendChallenge;
-    winner: null | "creator" | "guest" | "tie";
-  }>;
+  _code: string,
+  _token: string,
+  _score: number,
+): Promise<{
+  challenge: FriendChallenge;
+  winner: null | "creator" | "guest" | "tie";
+}> {
+  throw new Error("Score uploads are disabled. Play a server-verified match.");
 }
 const SESSIONS = "altameta:friendSessions:v1";
 export function getFriendSessions(): Record<string, FriendSession> {
@@ -129,7 +140,11 @@ export function getFriendSessions(): Record<string, FriendSession> {
       accountStorage.getItem("altameta:friendChallenge") || "null",
     );
     if (old?.code && !all[old.code]) all[old.code] = old;
-    return all;
+    return Object.fromEntries(
+      Object.entries(all).filter(
+        ([, value]) => (value as FriendSession).token === "account",
+      ),
+    ) as Record<string, FriendSession>;
   } catch {
     return {};
   }
