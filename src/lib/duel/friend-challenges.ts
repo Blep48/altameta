@@ -1,3 +1,4 @@
+import { accountStorage, accountKeys, accountScope } from "../account/store";
 const URL =
   "https://uhazmkzewagtalbyzgcj.supabase.co/functions/v1/friend-challenge";
 const KEY = "sb_publishable_Onsx-GUCZWzWmb93TsMbwQ_5hfJJCw3";
@@ -21,6 +22,7 @@ export interface FriendChallenge {
   payment_mode: "demo" | "in_person";
 }
 export interface FriendSession {
+  expiresAt?: string;
   code: string;
   token: string;
   role: "creator" | "guest";
@@ -34,8 +36,53 @@ async function call(body: unknown) {
     signal: AbortSignal.timeout(12000),
   });
   const j = await r.json();
-  if (!r.ok) throw new Error(j.error || "Friend challenge error");
+  if (!r.ok)
+    throw new FriendChallengeError(
+      j.error || "Friend challenge error",
+      r.status,
+    );
   return j;
+}
+export class FriendChallengeError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
+    super(message);
+  }
+}
+
+export function isSessionCurrent(session: FriendSession, now = Date.now()) {
+  return !!session.expiresAt && new Date(session.expiresAt).getTime() > now;
+}
+
+/** Refresh legacy sessions without treating a network error as expiration. */
+export async function refreshFriendExpirations() {
+  const scope = accountScope();
+  const sessions = getFriendSessions();
+  await Promise.all(
+    Object.values(sessions).map(async (session) => {
+      if (session.expiresAt) return;
+      try {
+        const challenge = await getFriendChallenge(session.code);
+        if (accountScope() !== scope) return;
+        setFriendSession({
+          ...session,
+          expiresAt: challenge?.expires_at ?? new Date(0).toISOString(),
+        });
+      } catch (e) {
+        if (
+          accountScope() === scope &&
+          e instanceof FriendChallengeError &&
+          e.status === 404
+        )
+          setFriendSession({
+            ...session,
+            expiresAt: new Date(0).toISOString(),
+          });
+      }
+    }),
+  );
 }
 export async function createFriendChallenge(i: {
   gameId: string;
@@ -77,9 +124,9 @@ const SESSIONS = "altameta:friendSessions:v1";
 export function getFriendSessions(): Record<string, FriendSession> {
   if (typeof window === "undefined") return {};
   try {
-    const all = JSON.parse(localStorage.getItem(SESSIONS) || "{}");
+    const all = JSON.parse(accountStorage.getItem(SESSIONS) || "{}");
     const old = JSON.parse(
-      localStorage.getItem("altameta:friendChallenge") || "null",
+      accountStorage.getItem("altameta:friendChallenge") || "null",
     );
     if (old?.code && !all[old.code]) all[old.code] = old;
     return all;
@@ -92,7 +139,7 @@ export function getFriendSession(code?: string): FriendSession | null {
   if (code) return all[code] ?? null;
   try {
     const old = JSON.parse(
-      localStorage.getItem("altameta:friendChallenge") || "null",
+      accountStorage.getItem("altameta:friendChallenge") || "null",
     );
     return old?.code
       ? (all[old.code] ?? null)
@@ -102,15 +149,15 @@ export function getFriendSession(code?: string): FriendSession | null {
   }
 }
 export function setFriendSession(s: FriendSession) {
-  localStorage.setItem(
+  accountStorage.setItem(
     SESSIONS,
     JSON.stringify({ ...getFriendSessions(), [s.code]: s }),
   );
-  localStorage.setItem("altameta:friendChallenge", JSON.stringify(s));
+  accountStorage.setItem("altameta:friendChallenge", JSON.stringify(s));
 }
 export function clearFriendSessions() {
-  localStorage.removeItem(SESSIONS);
-  localStorage.removeItem("altameta:friendChallenge");
-  for (const k of Object.keys(localStorage))
-    if (k.startsWith("altameta:pendingScore:")) localStorage.removeItem(k);
+  accountStorage.removeItem(SESSIONS);
+  accountStorage.removeItem("altameta:friendChallenge");
+  for (const k of accountKeys())
+    if (k.startsWith("altameta:pendingScore:")) accountStorage.removeItem(k);
 }

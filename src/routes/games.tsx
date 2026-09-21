@@ -166,6 +166,7 @@ function GameSelection() {
                 throw new Error("Not enough demo balance");
               const url = `${window.location.origin}/challenge/${ch.code}`;
               setFriendSession({
+                expiresAt: ch.expires_at,
                 code: ch.code,
                 token,
                 role: "creator",

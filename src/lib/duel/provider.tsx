@@ -1,4 +1,10 @@
 import {
+  accountStorage,
+  accountKeys,
+  accountUsername,
+  accountScope,
+} from "../account/store";
+import {
   createContext,
   useCallback,
   useContext,
@@ -89,7 +95,7 @@ function loadAccount() {
   );
   account.history = storage.read<MatchOutcome[]>(STORAGE_KEYS.history) ?? [];
   account.ladder = readLadder();
-  for (const key of Object.keys(localStorage)) {
+  for (const key of accountKeys()) {
     if (key.startsWith("altameta:friendSettled:"))
       account.settled.push(key.slice("altameta:friendSettled:".length));
     if (key.startsWith("altameta:friendReserved:"))
@@ -113,6 +119,12 @@ function useDuelState() {
     wagerRef = useRef(wagerEur);
   const abortRef = useRef<AbortController | null>(null);
   const commit = useCallback((next: Account) => {
+    const username = accountUsername();
+    if (username)
+      next = {
+        ...next,
+        profile: { ...next.profile, username, id: accountScope() },
+      };
     accountRef.current = next;
     storage.write(ACCOUNT_KEY, next);
     setAccount(next);
@@ -529,13 +541,13 @@ function useDuelState() {
     setLastOutcome(null);
     clearFriendSessions();
     clearPendingScores();
-    localStorage.removeItem("altameta:ladder");
-    for (const key of Object.keys(localStorage))
+    accountStorage.removeItem("altameta:ladder");
+    for (const key of accountKeys())
       if (
         key.startsWith("altameta:friendReserved:") ||
         key.startsWith("altameta:friendSettled:")
       )
-        localStorage.removeItem(key);
+        accountStorage.removeItem(key);
     commit(newAccount(createDefaultProfile()));
     setWagerEur(DEFAULT_WAGER_EUR);
   }, [commit, setMatch, setWagerEur]);
