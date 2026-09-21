@@ -7,7 +7,11 @@ import { formatEuro } from "@/lib/duel/economy";
 import { winRate } from "@/lib/duel/player";
 import { leagueForIndex, peakLeagueIndex } from "@/lib/duel/leagues";
 import { ladderPrizeUnits } from "@/lib/duel/ladder";
-import { getFriendSessions } from "@/lib/duel/friend-challenges";
+import {
+  getFriendSessions,
+  isSessionCurrent,
+  refreshFriendExpirations,
+} from "@/lib/duel/friend-challenges";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -45,10 +49,24 @@ function Home() {
   } = useDuel();
   const [sessions, setSessions] = useState<string[]>([]);
   useEffect(() => {
-    if (ready) {
-      leaveGame();
-      setSessions(Object.keys(getFriendSessions()));
-    }
+    if (!ready) return;
+    let live = true;
+    leaveGame();
+    const update = () => {
+      if (live)
+        setSessions(
+          Object.values(getFriendSessions())
+            .filter((s) => isSessionCurrent(s))
+            .map((s) => s.code),
+        );
+    };
+    update();
+    void refreshFriendExpirations().then(update);
+    const timer = setInterval(update, 1000);
+    return () => {
+      live = false;
+      clearInterval(timer);
+    };
   }, [ready, leaveGame]);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("50");

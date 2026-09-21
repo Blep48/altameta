@@ -62,10 +62,22 @@ Run `npm ci`, `npm test`, `npm run build`, then `npm run typecheck` (build gener
 - Duel and demo Friend Challenge winners receive 95% of the two-player pool, including their own entry. A €1 entry returns €1.90, a net gain of €0.90.
 - Ladder cash-out is `entry × 2^wins × 0.95`; continuation rounds do not charge another entry.
 - IN PERSON results update history/stats without changing demo balance.
-- Balance, reservations, Ladder and completed results share one persisted account snapshot. Existing profiles/history migrate on first load. Reset clears the account and friend sessions.
+- Balance, reservations, Ladder, completed results and friend sessions are saved to the signed-in demo account. Reset clears that account's progress.
 - Each friend challenge has its own saved session. Failed score uploads remain on the device; open the challenge and retry the original score.
 - Dino Run and Flappy finish when all 240 seeded obstacles are cleared.
-- Git-triggered Vercel deployments are temporarily disabled by `git.deploymentEnabled: false` in `vercel.json`. Remove that setting when automatic deployment should resume; local builds and GitHub checks remain available.
+- Git-triggered Vercel deployments are enabled.
+
+## Demo accounts
+
+Users register with a case-insensitive username (3–20 ASCII letters, digits or underscores) and a password (at least 8 characters, maximum 72 UTF-8 bytes). Supabase Auth hashes passwords and handles sessions; a server-only registration function maps usernames to internal, non-deliverable email identifiers. No email confirmation or password recovery is offered. New accounts start at €100 demo credit; old guest data is left untouched on the original device and is not automatically imported into a different identity.
+
+Apply `supabase/migrations/20260920200403_demo_accounts.sql` and deploy `supabase/functions/demo-register/index.ts` before publishing the frontend. Registration is public with server-side validation and rate limiting. Only this Edge Function uses the service-role credential. `demo_accounts` has owner-only RLS and revision-checked saves; concurrent writes are rejected rather than silently overwriting another device's progress. The client retains failed saves per user, offers retry, and flushes before logout. Friend tokens and queued scores are included in the owner's private snapshot.
+
+Expired friend sessions are hidden on the homepage at their expiry time; legacy sessions obtain their expiry from the API. Completed match history remains intact.
+
+This is cloud persistence for **play money**, not a server-authoritative wallet or anti-cheat system: game results and balance calculations still originate in the client. Never enable real deposits or withdrawals on this implementation.
+
+`npm test` includes authentication UI, save-queue, account isolation, retry and expiry regressions. `npm run test:browser` uses mocked Auth, account and challenge endpoints. Live integration verification additionally checks registration/login, independent-client restoration, owner-only read/write access, stale-save rejection, incorrect passwords and duplicate usernames.
 
 The friend-challenge Edge Function is hosted separately from this repository. Automated tests mock its network boundary and do not write test games to the production database.
 

@@ -154,6 +154,7 @@ function Challenge() {
         profile.avatar,
       );
       setFriendSession({
+        expiresAt: joined.challenge.expires_at,
         code,
         token: joined.token,
         role: "guest",

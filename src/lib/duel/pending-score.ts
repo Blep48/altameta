@@ -1,3 +1,4 @@
+import { accountStorage, accountScope } from "../account/store";
 import {
   getFriendChallenge,
   submitFriendScore,
@@ -11,7 +12,8 @@ const memory = new Map<string, PendingScore>();
 export function getPendingScore(code: string): PendingScore | null {
   try {
     return (
-      memory.get(code) ?? JSON.parse(localStorage.getItem(key(code)) || "null")
+      memory.get(code) ??
+      JSON.parse(accountStorage.getItem(key(code)) || "null")
     );
   } catch {
     return memory.get(code) ?? null;
@@ -22,13 +24,14 @@ export function savePendingScore(pending: PendingScore) {
   if (getPendingScore(pending.code)) return;
   memory.set(pending.code, pending);
   try {
-    localStorage.setItem(key(pending.code), JSON.stringify(pending));
+    accountStorage.setItem(key(pending.code), JSON.stringify(pending));
   } catch {
     /* Keep the run recoverable in this tab. */
   }
 }
 const inFlight = new Map<string, Promise<boolean>>();
 export function retryPendingScore(code: string): Promise<boolean> {
+  const scope = accountScope();
   const existing = inFlight.get(code);
   if (existing) return existing;
   const pending = getPendingScore(code);
@@ -42,13 +45,14 @@ export function retryPendingScore(code: string): Promise<boolean> {
         await submitFriendScore(code, pending.token, pending.score);
       else if (recorded !== pending.score)
         throw new Error("A different run has already been submitted");
+      if (accountScope() !== scope) return false;
       memory.delete(code);
-      localStorage.removeItem(key(code));
+      accountStorage.removeItem(key(code));
       return true;
     } catch {
       return false;
     } finally {
-      inFlight.delete(code);
+      if (accountScope() === scope) inFlight.delete(code);
     }
   })();
   inFlight.set(code, task);

@@ -1,3 +1,4 @@
+import { accountStorage, accountKeys } from "../account/store";
 import { PAYOUT_RATE } from "./economy";
 export interface LadderRun {
   gameId: string;
@@ -24,7 +25,7 @@ export const ladderFeeUnits = (run: LadderRun) =>
 export function readLadder(): LadderRun | null {
   if (typeof window === "undefined") return null;
   try {
-    const x = JSON.parse(localStorage.getItem(KEY) || "null");
+    const x = JSON.parse(accountStorage.getItem(KEY) || "null");
     return x && typeof x.gameId === "string" ? x : null;
   } catch {
     return null;
@@ -32,6 +33,6 @@ export function readLadder(): LadderRun | null {
 }
 export function writeLadder(run: LadderRun | null) {
   if (typeof window === "undefined") return;
-  if (run) localStorage.setItem(KEY, JSON.stringify(run));
-  else localStorage.removeItem(KEY);
+  if (run) accountStorage.setItem(KEY, JSON.stringify(run));
+  else accountStorage.removeItem(KEY);
 }

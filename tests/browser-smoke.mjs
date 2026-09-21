@@ -46,14 +46,73 @@ try {
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
+  // Auth and account persistence are fixtures here; live isolation is tested separately.
+  const user = {
+    id: "smoke-user",
+    email: "smoke@users.altameta.invalid",
+    aud: "authenticated",
+    role: "authenticated",
+  };
+  let cloud = { state: {}, revision: 0, username: "smoke" };
+  const token = [
+    { alg: "HS256", typ: "JWT" },
+    { sub: user.id, exp: Math.floor(Date.now() / 1000) + 3600 },
+    "fixture",
+  ]
+    .map((v) =>
+      Buffer.from(typeof v === "string" ? v : JSON.stringify(v)).toString(
+        "base64url",
+      ),
+    )
+    .join(".");
+  await page.route("https://*.supabase.co/auth/v1/**", async (route) => {
+    const data = route.request().url().includes("/token")
+      ? {
+          access_token: token,
+          refresh_token: "fixture",
+          expires_in: 3600,
+          token_type: "bearer",
+          user,
+        }
+      : user;
+    await route.fulfill({ json: data });
+  });
+  await page.route("https://*.supabase.co/rest/v1/**", async (route) => {
+    if (route.request().url().includes("/rpc/save_demo_account")) {
+      const body = route.request().postDataJSON();
+      if (body.expected_revision !== cloud.revision) {
+        await route.fulfill({ json: [] });
+        return;
+      }
+      cloud = {
+        ...cloud,
+        state: body.next_state,
+        revision: cloud.revision + 1,
+      };
+      await route.fulfill({ json: [{ revision: cloud.revision }] });
+    } else await route.fulfill({ json: cloud });
+  });
   await mkdir("test-results", { recursive: true });
   await page.goto("http://127.0.0.1:5173");
+  await page.getByLabel("Username", { exact: true }).fill("smoke");
+  await page.getByLabel("Password", { exact: true }).fill("fixture-password");
+  await page.getByRole("button", { name: "LOG IN", exact: true }).click();
   await expect(page.getByText("Demo Balance", { exact: true })).toBeVisible();
-  await page.waitForFunction(() => localStorage.getItem("duel:account:v1"));
+  await page.waitForFunction(
+    () =>
+      JSON.parse(
+        localStorage.getItem("altameta:cloud:smoke-user") || '{"data":{}}',
+      ).data["duel:account:v1"],
+  );
   await page.screenshot({ path: "test-results/home.png" });
   const balance = () =>
     page.evaluate(
-      () => JSON.parse(localStorage.getItem("duel:account:v1")).profile.coins,
+      () =>
+        JSON.parse(
+          JSON.parse(localStorage.getItem("altameta:cloud:smoke-user")).data[
+            "duel:account:v1"
+          ],
+        ).profile.coins,
     );
   expect(await balance()).toBe(10000);
   await page.getByRole("link", { name: /PLAY CHOOSE/ }).click();
@@ -64,8 +123,11 @@ try {
   ).toBeVisible();
   await page.waitForFunction(
     () =>
-      JSON.parse(localStorage.getItem("duel:account:v1")).profile.coins ===
-      9900,
+      JSON.parse(
+        JSON.parse(localStorage.getItem("altameta:cloud:smoke-user")).data[
+          "duel:account:v1"
+        ],
+      ).profile.coins === 9900,
   );
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(page.getByText("Demo Balance", { exact: true })).toBeVisible();
@@ -124,16 +186,18 @@ try {
     };
     challenges.set(code, ch);
     await page.goto("http://127.0.0.1:5173/");
-    await page.evaluate(
-      ({ code }) => {
-        const all = JSON.parse(
-          localStorage.getItem("altameta:friendSessions:v1") || "{}",
-        );
-        all[code] = { code, token: "fixture", role: "creator", seed: 1 };
-        localStorage.setItem("altameta:friendSessions:v1", JSON.stringify(all));
-      },
-      { code },
-    );
+    await expect(
+      page.getByText("Saved to account", { exact: true }),
+    ).toBeVisible();
+    const all = JSON.parse(cloud.state["altameta:friendSessions:v1"] || "{}");
+    all[code] = {
+      code,
+      token: "fixture",
+      role: "creator",
+      seed: 1,
+      expiresAt: ch.expires_at,
+    };
+    cloud.state["altameta:friendSessions:v1"] = JSON.stringify(all);
     await page.goto("http://127.0.0.1:5173/challenge/" + code);
     await page.getByRole("button", { name: "PLAY YOUR RUN" }).click();
     await page.waitForURL("**/play/" + (game === "memory" ? "memory" : game));
@@ -194,7 +258,11 @@ try {
   expect(
     await page.evaluate(
       () =>
-        JSON.parse(localStorage.getItem("altameta:pendingScore:OFFLINE")).score,
+        JSON.parse(
+          JSON.parse(localStorage.getItem("altameta:cloud:smoke-user")).data[
+            "altameta:pendingScore:OFFLINE"
+          ],
+        ).score,
     ),
   ).toBeGreaterThanOrEqual(0);
   failSubmit = false;
