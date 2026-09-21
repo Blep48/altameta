@@ -1,84 +1,57 @@
-# Duel Arena
+# Altameta Duels
 
-Create the initial mobile-first prototype for "DUEL", a competitive 1v1 arcade minigame web app with virtual economy (Duel Coins):
+Arcade demo with username/password accounts, eight games, friend challenges and an Infinite Ladder. All balances are play money. Dino Run is retired.
 
-1. Core Concept & Economy:
-- Virtual demo currency only ("Duel Coins"), no real money or gambling.
-- Default starter balance: 10,000 Duel Coins.
-- Entry fee per match: 100 Duel Coins. Total winner return: 190 Duel Coins (net +90); loss: -100 Duel Coins. Commission is 5% of the combined stakes.
-- Persistent local/database storage for player profile, rating (Elo/MMR style), match history, and coin balance.
+## Authority and persistence
 
-2. Design & UX:
-- Mobile-first, portrait orientation, dark mode arcade aesthetic (sleek competitive gaming vibe, neon accents, clean typography, large touch-friendly buttons).
-- Fluid animations, quick transitions, visual and optional audio/web audio synthesis feedback (countdown beeps, success chime, false start buzz).
+The browser sends ordered controls over an authenticated WebSocket. It does not submit scores, timestamps, wins or wallet changes. The `arena` Edge Function runs the game clock, physics, collision rules and scoring; it determines winners and settles balances. Browser simulation is only for drawing.
 
-3. Screens & Navigation:
-- HOME: DUEL logo, balance indicator, prominent "PLAY" button, player rating, quick stats, recent match history, entry points to Leaderboard and Profile.
-- GAME SELECTION: List minigames ("REACTION" playable; "RHYTHM", "DIRECTION", "MEMORY", "PRECISION" marked as coming soon).
-- MOCK MATCHMAKING: "Searching for opponent..." screen with radar/pulsing animation, automatically pairing within 2-4 seconds with a simulated bot opponent having believable username, avatar, rating, and realistic target reaction time.
-- REACTION GAME (5 rounds):
-  * "GET READY" followed by 3-2-1 countdown.
-  * Random delay (1.5s - 4.5s) before screen/target turns vibrant green.
-  * Measures tap response in milliseconds.
-  * Detects false start if tapped early, penalizing round.
-  * Displays round indicator (1/5), last round reaction time, running average, and best time.
-  * Simulated opponent generates realistic reaction times per round.
-- MATCH RESULT:
-  * Dramatic comparison: You (e.g. 195 ms avg) vs Opponent (e.g. 215 ms avg).
-  * Clear WIN / DEFEAT banner, 190 Duel Coins total return (+90 net) or -100 Duel Coins, rating delta (+/- 15 pts).
-  * "REMATCH" (loops directly back into matchmaking) and "BACK TO HOME".
-- PROFILE: Username, avatar picker, rating, games played, wins, losses, win rate, best reaction record, coin balance.
-- LEADERBOARD: Global leaderboard with at least 20 seeded players, highlighting the current player.
+Each run has one server-owned connection and an exclusive persisted lease. Disconnecting after play starts forfeits the run; an expired worker lease also forfeits instead of accepting a replay. Runs last at most 110 seconds. Results are shown only after the database confirms settlement.
 
-4. Modular Architecture:
-- Isolate UI, game logic, player data, matchmaking service, economy, and minigame engine so future real-time multiplayer and server-authoritative validation can be plugged in without refactoring the UI.
-- Verify the end-to-end loop: Home -> Play -> Matchmaking -> Reaction (5 rounds) -> Result -> Rematch.
+`arena_accounts`, `arena_challenges` and `arena_events` are private service-only tables. `commit_arena` atomically checks account/challenge revisions, saves the result and records the request ID. Duplicate requests cannot credit twice. The server records received inputs for completed runs. The leaderboard reads verified server profiles.
 
-This project was built with [Lovable](https://lovable.dev).
+The verified demo season starts with €100 and clean statistics. Previous client-authored snapshots remain in `demo_accounts` as legacy data; they are never promoted into verified balances or results. Local storage holds preferences and navigation metadata only. The retired `friend-challenge` endpoint returns 410; queued browser score uploads are no longer supported.
 
-## Build with Lovable
+## Economy
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/0df3ddd1-e215-47c7-87b9-f6312f1c0424).
+- Duel and demo friend-challenge winners receive 95% of the combined stakes: €1 + €1 returns €1.90, net gain €0.90.
+- Ties return the stake. A Ladder tie preserves the streak.
+- Ladder cash-out is entry × 2^wins × 0.95; continuation rounds do not charge another entry.
+- IN PERSON friend results affect verified statistics, not demo balance.
+- An unfinished friend challenge expires after 24 hours; reserved demo stakes are returned on the next account refresh.
+- Single-player duels and Ladder opponents are explicitly demo bots. Friend outcomes come from both authenticated runs.
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+## Accounts
 
-## Development
+Usernames are case-insensitive, 3–20 ASCII letters/digits/underscores. Passwords are at least 8 characters and at most 72 UTF-8 bytes. Supabase Auth stores password hashes and sessions; `demo-register` maps usernames to internal email identifiers. There is no email confirmation or password recovery in this demo. The service-role credential is server-only.
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+## Development and verification
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+npm ci
 npm run dev
+npm test
+npm run build
+npm run typecheck
+npm run lint
 ```
 
-## Reliability checks
+Unit/component tests cover the eight engines, settlement, friend ownership/expiry, replay protection, account isolation and the input-only UI protocol. The former mocked browser-score smoke test has been retired because it exercised the removed trust model.
 
-Run `npm ci`, `npm test`, `npm run build`, then `npm run typecheck` (build generates the route types). The pull-request workflow runs the same checks.
+Explicitly opt in to live integration tests (creates two disposable accounts and uses demo stakes):
 
-- Duel and demo Friend Challenge winners receive 95% of the two-player pool, including their own entry. A €1 entry returns €1.90, a net gain of €0.90.
-- Ladder cash-out is `entry × 2^wins × 0.95`; continuation rounds do not charge another entry.
-- IN PERSON results update history/stats without changing demo balance.
-- Balance, reservations, Ladder, completed results and friend sessions are saved to the signed-in demo account. Reset clears that account's progress.
-- Each friend challenge has its own saved session. Failed score uploads remain on the device; open the challenge and retry the original score.
-- Dino Run and Flappy finish when all 240 seeded obstacles are cleared.
-- Git-triggered Vercel deployments are enabled.
+```sh
+RUN_ARENA_LIVE=1 node tests/arena-live.mjs
+```
 
-## Demo accounts
+The live test checks authentication, private-table/RPC access, forged-score rejection, concurrent starts, complete Reaction runs, €1.90 payout, friend settlement and the server leaderboard. These are API/WebSocket integration tests, not a browser usability or network-fairness certification.
 
-Users register with a case-insensitive username (3–20 ASCII letters, digits or underscores) and a password (at least 8 characters, maximum 72 UTF-8 bytes). Supabase Auth hashes passwords and handles sessions; a server-only registration function maps usernames to internal, non-deliverable email identifiers. No email confirmation or password recovery is offered. New accounts start at €100 demo credit; old guest data is left untouched on the original device and is not automatically imported into a different identity.
+## Deployment
 
-Apply `supabase/migrations/20260920200403_demo_accounts.sql` and deploy `supabase/functions/demo-register/index.ts` before publishing the frontend. Registration is public with server-side validation and rate limiting. Only this Edge Function uses the service-role credential. `demo_accounts` has owner-only RLS and revision-checked saves; concurrent writes are rejected rather than silently overwriting another device's progress. The client retains failed saves per user, offers retry, and flushes before logout. Friend tokens and queued scores are included in the owner's private snapshot.
+Apply migrations in order, including `20260921155442_server_arena.sql`. Deploy `demo-register`, `arena` (including both shared modules and `socket.ts`) and the retirement stub `friend-challenge`. The arena function uses custom `auth.getUser` authentication for REST requests and the first WebSocket frame; tokens never appear in URLs. Its gateway JWT check must remain disabled for the WebSocket handshake. Anonymous gameplay remains forbidden by the function.
 
-Expired friend sessions are hidden on the homepage at their expiry time; legacy sessions obtain their expiry from the API. Completed match history remains intact.
+Git-triggered Vercel deployments are enabled. Preserve published history and merge PRs with a merge commit.
 
-This is cloud persistence for **play money**, not a server-authoritative wallet or anti-cheat system: game results and balance calculations still originate in the client. Never enable real deposits or withdrawals on this implementation.
+## Current limits
 
-`npm test` includes authentication UI, save-queue, account isolation, retry and expiry regressions. `npm run test:browser` uses mocked Auth, account and challenge endpoints. Live integration verification additionally checks registration/login, independent-client restoration, owner-only read/write access, stale-save rejection, incorrect passwords and duplicate usernames.
-
-The friend-challenge Edge Function is hosted separately from this repository. Automated tests mock its network boundary and do not write test games to the production database.
-
-<!-- production redeploy trigger: 2026-09-19 -->
+Server authority prevents fabricated browser scores; it does not prove a human is playing. Automated valid controls remain possible, and network latency affects timing games because only server receipt time is trusted. This demo still needs dedicated load testing, latency/fairness work, anti-automation controls, operational monitoring and the separate financial/legal requirements before any real-money launch. No deposits or withdrawals are implemented.
