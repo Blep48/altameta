@@ -5,6 +5,8 @@ import {
   input,
   publicEngine,
   rng,
+  arrows,
+  rhythmChart,
   type Engine,
   type Game,
   type Input,
@@ -636,5 +638,59 @@ export function view(a: Account, c: Challenge | null, now: number) {
       : null,
     seq: active?.seq ?? 0,
     challenge: c ? publicChallenge(c, a.profile.id) : null,
+  };
+}
+
+/** Public opponent progress is decided by the worker, never a browser timer. */
+export function opponentView(
+  run: Run,
+  challenge: Challenge | null,
+  account: Account,
+  now: number,
+) {
+  const e = run.engine;
+  if (!e) return null;
+  let score: number | null = null,
+    forfeited = false;
+  if (run.match.friend) {
+    const other = run.match.friend.role === "creator" ? "guest" : "creator";
+    score = challenge?.[`${other}_score`] ?? null;
+    forfeited = challenge?.[`${other}_forfeit`] ?? false;
+  } else {
+    // Demo bots have a server-generated score and a game-specific simulated finish time.
+    const n = run.botScore;
+    const duration =
+      run.match.gameId === "reaction"
+        ? 18000
+        : run.match.gameId === "rhythm"
+          ? (rhythmChart(e.seed)[n]?.time ?? 100000) + 150
+          : run.match.gameId === "direction"
+            ? (() => {
+                const a = arrows(e.seed)[n];
+                return a ? a.spawn + a.travel : 100000;
+              })()
+            : run.match.gameId === "memory"
+              ? 2200 + n * 3300
+              : run.match.gameId === "flappy"
+                ? 2500 + n * 1250
+                : run.match.gameId === "knife"
+                  ? 1500 + n * 400
+                  : 1500 + n * 850;
+    if (e.done || now >= e.start + Math.min(100000, duration)) score = n;
+  }
+  if (score == null) return null;
+  const higher = run.match.gameId !== "reaction";
+  return {
+    score,
+    forfeited,
+    ahead:
+      forfeited || (higher ? e.score > score : e.index > 0 && e.score < score),
+    needed: higher && !forfeited ? Math.max(0, score - e.score + 1) : null,
+    prizeUnits:
+      challenge?.payment_mode === "in_person"
+        ? 0
+        : run.match.mode === "ladder" && account.ladder
+          ? prize({ ...account.ladder, streak: account.ladder.streak + 1 })
+          : Math.round(run.match.wagerEur * 190),
   };
 }

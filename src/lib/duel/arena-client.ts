@@ -5,6 +5,13 @@ import type { ActiveMatch, MatchOutcome } from "./types";
 import type { Engine } from "../../../supabase/functions/_shared/arena-engine";
 import type { FriendChallenge } from "./friend-challenges";
 export interface ArenaView {
+  opponent?: {
+    score: number;
+    forfeited: boolean;
+    ahead: boolean;
+    needed: number | null;
+    prizeUnits: number;
+  } | null;
   revision: number;
   sessions?: {
     code: string;

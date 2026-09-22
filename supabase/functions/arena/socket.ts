@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.116.0";
 import {
   command,
   view,
+  opponentView,
   type Account,
   type Challenge,
   type Run,
@@ -45,6 +46,8 @@ export function arenaSocket(req: Request) {
   let burstStart = 0,
     burst = 0,
     lastSent = 0;
+  let nextChallengeRead = 0,
+    readingChallenge = false;
   const send = (body: unknown) => {
     if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(body));
   };
@@ -162,6 +165,7 @@ export function arenaSocket(req: Request) {
         : null,
       seq: run.seq,
       matchId: run.match.id,
+      opponent: opponentView(run, challenge, account, Date.now()),
     });
     lastSent = Date.now();
   };
@@ -257,16 +261,35 @@ export function arenaSocket(req: Request) {
         snapshot();
         timer = setInterval(() => {
           if (!run?.engine || finishing || finished) return;
+          if (
+            run.match.friend &&
+            !readingChallenge &&
+            Date.now() >= nextChallengeRead
+          ) {
+            readingChallenge = true;
+            nextChallengeRead = Date.now() + 1500;
+            void readChallenge(run.match.friend.code)
+              .then((row) => {
+                if (row) challenge = row.state;
+              })
+              .catch(() => {
+                /* Retry the read next interval; gameplay stays responsive. */
+              })
+              .finally(() => {
+                readingChallenge = false;
+              });
+          }
           const beforeGreen =
             run.engine.next > 0 && run.engine.time >= run.engine.next;
           advance(run.engine, Date.now());
           if (run.engine.done) {
+            snapshot();
             void persist(false);
             return;
           }
           const green =
             run.engine.next > 0 && run.engine.time >= run.engine.next;
-          if (Date.now() - lastSent >= 100 || green !== beforeGreen) snapshot();
+          if (Date.now() - lastSent >= 50 || green !== beforeGreen) snapshot();
         }, 10);
         return;
       }
@@ -298,8 +321,8 @@ export function arenaSocket(req: Request) {
       run.seq = b.seq;
       run.lastInput = b.input;
       transcript.push({ seq: b.seq, input: b.input as Input, receivedAt: now });
+      snapshot();
       if (run.engine.done) await persist(false);
-      else snapshot();
     } catch (e) {
       send({ error: e instanceof Error ? e.message : "Invalid command" });
       if (run) await persist(true);

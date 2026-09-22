@@ -21,7 +21,7 @@ const RULES: Record<string, string> = {
   direction:
     "Swipe in the direction shown by the lowest falling arrow. A wrong swipe or an arrow reaching the danger line ends your run.",
   memory:
-    "Memorize the numbered squares. After 1 second the numbers flash in order, then are hidden. Tap every square in order, starting from 1. Each cleared level adds another square.",
+    "Memorize the numbered squares. After 1.5 seconds the numbers flash in order, then are hidden. Tap every square in order, starting from 1. Each cleared level adds another square.",
   precision:
     "Press STOP while the moving marker is inside the target. The inner zone scores double. One miss ends the duel.",
   flappy:

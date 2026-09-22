@@ -45,7 +45,15 @@ vi.mock("@/lib/duel/arena-client", () => ({
 }));
 vi.mock("@/lib/duel/audio", () => ({
   startMusic: () => () => {},
-  sfx: { tap: vi.fn(), win: vi.fn(), lose: vi.fn() },
+  sfx: {
+    tap: vi.fn(),
+    win: vi.fn(),
+    lose: vi.fn(),
+    secured: vi.fn(),
+    falseStart: vi.fn(),
+    note: vi.fn(),
+    miss: vi.fn(),
+  },
 }));
 class FakeSocket {
   static OPEN = 1;
@@ -138,6 +146,39 @@ it("opens the result only after the server commits it", async () => {
     revision: 3,
   };
   act(() => ws.receive(result));
-  expect(mocks.publish).toHaveBeenCalledWith(result);
+  await waitFor(() => expect(mocks.publish).toHaveBeenCalledWith(result));
   expect(mocks.navigate).toHaveBeenCalledWith({ to: "/result" });
+});
+it("keeps the last confirmed feedback visible before leaving for the committed result", async () => {
+  render(<ServerArena game="stack" />);
+  await waitFor(() => expect(FakeSocket.instance.onopen).toBeTruthy());
+  const ws = FakeSocket.instance,
+    s = createEngine("stack", 1, 0);
+  act(() =>
+    ws.receive({ matchId: "match-test", engine: s, seq: 0, serverTime: 10 }),
+  );
+  act(() =>
+    ws.receive({
+      matchId: "match-test",
+      engine: { ...s, score: 1, perfects: 1, done: true },
+      seq: 1,
+      serverTime: 20,
+    }),
+  );
+  expect(screen.getByText("PERFECT!")).toBeTruthy();
+  act(() =>
+    ws.receive({
+      committed: true,
+      activeMatch: null,
+      lastOutcome: { won: true },
+      revision: 3,
+    }),
+  );
+  expect(mocks.publish).not.toHaveBeenCalled();
+  await new Promise((resolve) => setTimeout(resolve, 550));
+  expect(screen.getByText("PERFECT!")).toBeTruthy();
+  expect(mocks.navigate).not.toHaveBeenCalled();
+  await waitFor(() =>
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: "/result" }),
+  );
 });

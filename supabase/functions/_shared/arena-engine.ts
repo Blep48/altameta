@@ -14,6 +14,7 @@ export const GAMES = [
 export type Game = (typeof GAMES)[number];
 export type Input = "tap" | "left" | "right" | "up" | "down" | `cell:${number}`;
 export const STEP = 10;
+export const MEMORY_PREVIEW_MS = 1500;
 // Finish before the hosted worker wall-clock limit; identical for both players.
 export const MAX_RUN_MS = 110_000;
 export function rng(seed: number) {
@@ -130,7 +131,9 @@ export function board(seed: number, level: number) {
   return cells.slice(0, Math.min(14, 4 + level));
 }
 export function memoryHideAt(s: Engine) {
-  return s.start + s.phase + 1000 + board(s.seed, s.score).length * 140;
+  return (
+    s.start + s.phase + MEMORY_PREVIEW_MS + board(s.seed, s.score).length * 140
+  );
 }
 export function target(seed: number, stops: number) {
   const half = Math.max(0.035, 0.1 - stops * 0.0045),

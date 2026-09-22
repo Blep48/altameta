@@ -30,16 +30,34 @@ async function user(label) {
   return { db, token: data.session.access_token, id: data.user.id };
 }
 async function raw(u, body) {
-  const r = await fetch(base + "/functions/v1/arena", {
-    method: "POST",
-    headers: {
-      apikey: key,
-      ...(u ? { Authorization: "Bearer " + u.token } : {}),
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-  return { status: r.status, data: await r.json() };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const r = await fetch(base + "/functions/v1/arena", {
+      method: "POST",
+      headers: {
+        apikey: key,
+        ...(u ? { Authorization: "Bearer " + u.token } : {}),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    if ([502, 503, 504].includes(r.status) && attempt < 2) {
+      await r.text();
+      console.log(
+        `Retry temporary HTTP ${r.status} for ${body.action} with the same request ID`,
+      );
+      await pause(250 * (attempt + 1));
+      continue;
+    }
+    const text = await r.text();
+    try {
+      return { status: r.status, data: JSON.parse(text) };
+    } catch {
+      throw new Error(
+        `Arena ${body.action} returned non-JSON HTTP ${r.status}`,
+      );
+    }
+  }
+  throw new Error("Arena retry limit reached");
 }
 async function call(u, action, fields = {}, id = randomUUID()) {
   const r = await raw(u, { id, action, ...fields });
