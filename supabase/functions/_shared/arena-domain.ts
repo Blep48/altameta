@@ -136,6 +136,26 @@ export interface Command {
   avatar?: unknown;
 }
 export const WAGERS = [1, 2, 5, 10, 20, 30, 50];
+export const BOT_NAMES = [
+  "Aci Tom",
+  "Ottone Erminio",
+  "Kakato Miso",
+  "Ranza Mino",
+  "Cidio Gino",
+  "Là Aldo",
+  "Rato Timo",
+  "Renne Mino",
+  "Rato Mino",
+  "Rdato Rita",
+  "Cente Lino",
+  "Ricamente Teo",
+  "Lione Checco",
+  "Pocchia Checca",
+  "Ucarlo Devis",
+  "Tali Geni",
+  "Rea Nadia",
+] as const;
+
 export function initialAccount(id: string, username: string): Account {
   return {
     profile: {
@@ -483,7 +503,7 @@ export function command(
     const seed = c && mode === "friend" ? c.seed : entropy.seed;
     const opponent = {
       id: "server-bot",
-      username: "DEMO BOT",
+      username: BOT_NAMES[Math.floor(rng(entropy.seed ^ 0x5f3759df)() * BOT_NAMES.length)]!,
       avatar: "🤖",
       rating: a.profile.rating,
       meanReactionMs: 300,
