@@ -42,9 +42,9 @@ function Home() {
     muted,
     toggleMuted,
     canPlay,
-    updateProfile,
     ladder,
     cashOutLadder,
+    withdrawDemoBalance,
     leaveGame,
   } = useDuel();
   const [sessions, setSessions] = useState<string[]>([]);
@@ -70,17 +70,21 @@ function Home() {
   }, [ready, leaveGame]);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("50");
+  const [withdrawBusy, setWithdrawBusy] = useState(false);
   const [paymentToast, setPaymentToast] = useState<number | null>(null);
-  const fakeWithdraw = () => {
-    const amount = Math.max(
-      0,
-      Math.min(Number(withdrawAmount) || 0, profile.coins / 100),
-    );
-    if (!amount) return;
-    updateProfile({ coins: profile.coins - Math.round(amount * 100) });
-    setWithdrawOpen(false);
-    setPaymentToast(amount);
-    window.setTimeout(() => setPaymentToast(null), 4200);
+  const withdrawUnits = Math.round((Number(withdrawAmount) || 0) * 100);
+  const canWithdraw = withdrawUnits > 0 && withdrawUnits <= profile.coins;
+  const submitWithdraw = async () => {
+    if (withdrawBusy || !canWithdraw) return;
+    setWithdrawBusy(true);
+    try {
+      await withdrawDemoBalance(withdrawUnits);
+      setWithdrawOpen(false);
+      setPaymentToast(withdrawUnits);
+      window.setTimeout(() => setPaymentToast(null), 4200);
+    } finally {
+      setWithdrawBusy(false);
+    }
   };
 
   return (
@@ -94,7 +98,7 @@ function Home() {
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold">ALTAMETA DUELS</p>
               <p className="mt-0.5 text-sm">
-                Payment received · {formatEuro(Math.round(paymentToast * 100))}
+                Demo balance reduced · {formatEuro(paymentToast)}
               </p>
             </div>
             <span className="self-start text-[10px] text-white/60">now</span>
@@ -108,7 +112,8 @@ function Home() {
               WITHDRAW
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Choose an amount from your Altameta balance.
+              This removes demo funds from your balance. No real payment is
+              sent.
             </p>
             <div className="mt-5 flex items-center rounded-2xl border border-border bg-background px-4">
               <span className="text-2xl text-primary">€</span>
@@ -128,10 +133,11 @@ function Home() {
             </p>
             <button
               type="button"
-              onClick={fakeWithdraw}
+              onClick={() => void submitWithdraw()}
+              disabled={withdrawBusy || !canWithdraw}
               className="mt-5 w-full rounded-2xl bg-primary py-4 font-display font-black tracking-[.18em] text-primary-foreground"
             >
-              WITHDRAW
+              {withdrawBusy ? "PROCESSING…" : "WITHDRAW DEMO BALANCE"}
             </button>
             <button
               type="button"
@@ -200,7 +206,7 @@ function Home() {
         }}
         className="mt-3 w-full rounded-2xl border border-primary/60 bg-primary/10 py-3 font-display text-xs font-bold tracking-[.2em] text-primary"
       >
-        WITHDRAW
+        WITHDRAW DEMO BALANCE
       </button>
 
       <Link

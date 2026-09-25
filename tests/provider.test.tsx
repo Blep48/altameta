@@ -67,3 +67,21 @@ it("cashout waits for a server response instead of crediting locally", async () 
   });
   expect(result.current.profile.coins).toBe(10000);
 });
+it("withdraws demo balance through the server command", async () => {
+  const { result } = renderHook(() => useDuel(), { wrapper: DuelProvider });
+  await waitFor(() => expect(result.current.ready).toBe(true));
+  mocks.call.mockImplementationOnce(async () => {
+    const account = initialAccount("alice", "alice");
+    account.profile.coins = 7500;
+    const serverView = { ...view(account, null, 0), revision: 2 };
+    mocks.listener?.(serverView);
+    return serverView;
+  });
+  await act(async () => {
+    await result.current.withdrawDemoBalance(2500);
+  });
+  expect(mocks.call).toHaveBeenLastCalledWith("withdraw", {
+    amountUnits: 2500,
+  });
+  expect(result.current.profile.coins).toBe(7500);
+});

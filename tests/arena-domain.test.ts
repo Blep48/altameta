@@ -1,6 +1,9 @@
 import { it, expect } from "vitest";
 import {
   command,
+  BOT_NAMES,
+  chooseBotName,
+  isRankedAccount,
   initialAccount,
   settleChallenge,
   view,
@@ -49,6 +52,65 @@ it("charges the server wallet and settles a frozen stake exactly once", () => {
   expect(a.profile.wins).toBe(1);
   expect(() => run(a, "tick", { matchId: id })).toThrow("Match not active");
   expect(a.profile.coins).toBe(10090);
+});
+it("uses the approved bot roster and avoids recent repetitions", () => {
+  const a = initialAccount("a", "alice");
+  const firstNames = ["Aci Tom", "Ottone Erminio", "Kakato Miso", "Ranza Mino"];
+  a.history = firstNames.map((opponentName, index) => ({
+    id: `old-${index}`,
+    gameId: "stack",
+    mode: "duel",
+    opponentName,
+    opponentAvatar: "🤖",
+    opponentRating: 1200,
+    playerAvgMs: 0,
+    opponentAvgMs: 0,
+    playerBestMs: 0,
+    falseStarts: 0,
+    won: true,
+    tied: false,
+    coinDelta: 0,
+    wagerEur: 1,
+    ratingDelta: 0,
+    playedAt: new Date(0).toISOString(),
+    rounds: [],
+  }));
+  const selected = chooseBotName(a, 123);
+  expect(selected).not.toBe("Aci Tom");
+  expect(selected).not.toBe("Ottone Erminio");
+  expect(selected).not.toBe("Kakato Miso");
+  expect(selected).not.toBe("Ranza Mino");
+  expect(chooseBotName(a, 123)).toBe(selected);
+  expect(BOT_NAMES).toContain(chooseBotName(initialAccount("x", "x"), 123));
+});
+it("ranks active players only and hides integration-test accounts", () => {
+  const player = initialAccount("a", "bleppon");
+  player.profile.gamesPlayed = 1;
+  expect(isRankedAccount(player.profile)).toBe(true);
+  const testAccount = initialAccount("b", "qa_arena_a_mubr93wn");
+  testAccount.profile.gamesPlayed = 2;
+  expect(isRankedAccount(testAccount.profile)).toBe(false);
+  expect(isRankedAccount(initialAccount("c", "newbie").profile)).toBe(false);
+});
+it("withdraws only valid demo funds on the server and is idempotent", () => {
+  const a = initialAccount("a", "alice");
+  const request = {
+    id: "withdraw-once",
+    action: "withdraw",
+    amountUnits: 2500,
+  };
+  command(a, null, request, 1000, entropy());
+  expect(a.profile.coins).toBe(7500);
+  command(a, null, request, 1000, entropy());
+  expect(a.profile.coins).toBe(7500);
+  for (const amountUnits of [0, -1, 1.5, "100"]) {
+    expect(() =>
+      run(a, "withdraw", { amountUnits: amountUnits as number }),
+    ).toThrow("Invalid withdrawal amount");
+  }
+  expect(() => run(a, "withdraw", { amountUnits: 8000 })).toThrow(
+    "Not enough demo balance",
+  );
 });
 it("continues ladder without a second stake and cashes out 95% of the total pool once", () => {
   const a = initialAccount("a", "alice");
