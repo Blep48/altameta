@@ -129,6 +129,10 @@ function useDuelState() {
     [perform],
   );
   const cashOutLadder = useCallback(() => perform("cashout"), [perform]);
+  const withdrawDemoBalance = useCallback(
+    (amountUnits: number) => perform("withdraw", { amountUnits }),
+    [perform],
+  );
   const setWagerEur = useCallback((n: number) => {
     if ((WAGER_OPTIONS_EUR as readonly number[]).includes(n)) {
       wager.current = n;
@@ -159,6 +163,7 @@ function useDuelState() {
     continueLadder,
     startFriendMatch,
     cashOutLadder,
+    withdrawDemoBalance,
     leaveGame,
     cancelMatch: leaveGame,
     wagerEur: view?.activeMatch?.wagerEur ?? wagerEur,

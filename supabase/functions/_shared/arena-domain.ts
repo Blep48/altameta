@@ -136,6 +136,7 @@ export interface Command {
   seq?: unknown;
   input?: unknown;
   avatar?: unknown;
+  amountUnits?: unknown;
 }
 export const WAGERS = [1, 2, 5, 10, 20, 30, 50];
 export const BOT_NAMES = [
@@ -157,6 +158,24 @@ export const BOT_NAMES = [
   "Tali Geni",
   "Rea Nadia",
 ] as const;
+
+/** Integration-test accounts are intentionally hidden from the public rankings. */
+export function isRankedAccount(profile: Profile): boolean {
+  return profile.gamesPlayed > 0 && !profile.username.startsWith("qa_arena_");
+}
+
+/** Keep recent bot names varied without changing the server-authoritative roster. */
+export function chooseBotName(a: Account, seed: number): string {
+  const recent = new Set(
+    a.history
+      .filter((outcome) => outcome.mode !== "friend")
+      .slice(0, 4)
+      .map((outcome) => outcome.opponentName),
+  );
+  const available = BOT_NAMES.filter((name) => !recent.has(name));
+  const choices = available.length ? available : BOT_NAMES;
+  return choices[Math.floor(rng(seed)() * choices.length)]!;
+}
 
 export function initialAccount(id: string, username: string): Account {
   return {
@@ -504,11 +523,9 @@ export function command(
     }
     const seed = c && mode === "friend" ? c.seed : entropy.seed;
     const opponent = {
-      id: "server-bot",
-      username:
-        BOT_NAMES[
-          Math.floor(rng(entropy.seed ^ 0x5f3759df)() * BOT_NAMES.length)
-        ]!,
+      // “Clanker” is our internal bot label; the player sees the approved name roster.
+      id: "clanker",
+      username: chooseBotName(a, entropy.seed ^ 0x5f3759df),
       avatar: "🤖",
       rating: a.profile.rating,
       meanReactionMs: 300,
@@ -589,6 +606,14 @@ export function command(
       run.engine.done = true;
     }
     finish(a, c, now);
+  } else if (b.action === "withdraw") {
+    if (
+      typeof b.amountUnits !== "number" ||
+      !Number.isSafeInteger(b.amountUnits) ||
+      b.amountUnits <= 0
+    )
+      fail("Invalid withdrawal amount");
+    debit(a, b.amountUnits);
   } else if (b.action === "cashout") {
     if (a.active || !a.ladder?.active || a.ladder.streak < 1)
       fail("No ladder available to cash out");

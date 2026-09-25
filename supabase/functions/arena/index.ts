@@ -7,6 +7,7 @@ import {
   type Account,
   type Challenge,
   type Command,
+  isRankedAccount,
 } from "../_shared/arena-domain.ts";
 import { arenaSocket } from "./socket.ts";
 
@@ -36,6 +37,7 @@ const allowed = new Set([
   "seq",
   "input",
   "avatar",
+  "amountUnits",
 ]);
 Deno.serve(async (req: Request) => {
   if (req.headers.get("upgrade")?.toLowerCase() === "websocket")
@@ -97,20 +99,21 @@ Deno.serve(async (req: Request) => {
         .from("arena_accounts")
         .select("state->profile")
         .order("state->profile->rating", { ascending: false })
-        .limit(100);
+        .limit(1000);
       if (error) throw error;
       return json({
-        entries: (data ?? []).map((row) => {
-          const p = row.profile as Account["profile"];
-          return {
+        entries: (data ?? [])
+          .map((row) => row.profile as Account["profile"])
+          .filter(isRankedAccount)
+          .slice(0, 100)
+          .map((p) => ({
             id: p.id,
             username: p.username,
             avatar: p.avatar,
             rating: p.rating,
             wins: p.wins,
             isPlayer: p.id === user.id,
-          };
-        }),
+          })),
       });
     }
     // UUID-based request keys make creation retryable across network failures.
