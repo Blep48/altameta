@@ -171,3 +171,25 @@
 @utility animate-shake {
   animation: duel-shake 0.3s ease-in-out;
 }
+
+@keyframes menu-press-flash {
+  0%, 30% { background: color-mix(in oklch, var(--primary) 38%, transparent); box-shadow: inset 0 0 0 2px var(--primary), 0 0 18px color-mix(in oklch, var(--primary) 50%, transparent); opacity: 1; }
+  100% { background: transparent; box-shadow: inset 0 0 0 2px transparent; opacity: 0; }
+}
+.menu-press-flash { animation: menu-press-flash 300ms ease-out forwards; }
+@keyframes arena-float {
+  0% { opacity: 1; transform: translate(-50%, 12px) scale(.9); }
+  15% { opacity: 1; transform: translate(-50%, 0) scale(1.08); }
+  60% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -65px) scale(1); }
+}
+.arena-float { transform: translateX(-50%); animation: arena-float 1000ms ease-out forwards; text-shadow: 0 0 22px currentColor; }
+@keyframes arena-score-bump { 50% { transform: scale(1.15); color: var(--primary); } }
+.arena-score-bump { animation: arena-score-bump 220ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .arena-float { animation-name: arena-feedback-fade; }
+  .arena-score-bump { animation: none; }
+}
+@keyframes arena-feedback-fade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes arena-input-pulse { 0% { box-shadow: inset 0 0 0 3px var(--primary); opacity: .9; } 100% { box-shadow: inset 0 0 0 1px var(--primary); opacity: 0; } }
+.arena-input-pulse { animation: arena-input-pulse 180ms ease-out forwards; }

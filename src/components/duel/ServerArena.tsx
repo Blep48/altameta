@@ -9,13 +9,22 @@ import { supabase, SUPABASE_URL } from "@/lib/account/client";
 import { useDuel } from "@/lib/duel/provider";
 import { MINIGAMES } from "@/lib/duel/games";
 import { MatchBalance } from "./MatchBalance";
+import { OpponentOutBanner } from "./OpponentOutBanner";
+import {
+  predictFrame,
+  smoothPosition,
+  confirmedFeedback,
+  SCORE_UNITS,
+  type PendingControl,
+  type GameFeedback,
+} from "@/lib/duel/arena-presentation";
 import { sfx, startMusic } from "@/lib/duel/audio";
 import { setupCanvasArena } from "@/lib/duel/canvas";
 import {
-  advance,
   arrows,
   board,
   memoryHideAt,
+  MEMORY_PREVIEW_MS,
   obstacles,
   rhythmChart,
   target,
@@ -37,6 +46,7 @@ function draw(
   w: number,
   h: number,
   now: number,
+  perfect = false,
 ) {
   ctx.clearRect(0, 0, w, h);
   ctx.fillStyle = "#8b5cf6";
@@ -97,6 +107,8 @@ function draw(
   } else if (s.game === "stack") {
     const bh = Math.max(13, Math.min(19, h * 0.032));
     s.blocks.forEach((b, i) => {
+      ctx.fillStyle =
+        perfect && i === s.blocks.length - 1 ? "#83f451" : "#8b5cf6";
       ctx.globalAlpha = 0.55 + (i / s.blocks.length) * 0.35;
       ctx.fillRect(
         (b.x * w) / 100,
@@ -201,9 +213,13 @@ function draw(
         y = Math.floor(cell / 4) * h * 0.2 + h * 0.08;
       ctx.fillStyle = "#6d43ae";
       ctx.fillRect(x, y, w * 0.2, h * 0.15);
-      ctx.fillStyle = "#fff";
-      ctx.font = "bold 28px sans-serif";
-      if (visible && (phase < 1000 || Math.floor((phase - 1000) / 140) === i))
+      ctx.fillStyle = "#fcff72";
+      ctx.font = `900 ${Math.min(40, w * 0.105)}px sans-serif`;
+      if (
+        visible &&
+        (phase < MEMORY_PREVIEW_MS ||
+          Math.floor((phase - MEMORY_PREVIEW_MS) / 140) === i)
+      )
         ctx.fillText(String(i + 1), x + w * 0.1, y + h * 0.075);
     });
   }
@@ -223,11 +239,33 @@ export function ServerArena({ game }: { game: Game }) {
     closed = useRef(false),
     pointer = useRef<{ x: number; y: number } | null>(null);
   const [score, setScore] = useState(0),
+    [round, setRound] = useState(0),
+    [opponent, setOpponent] = useState<ArenaView["opponent"]>(null),
+    [feedback, setFeedback] = useState<(GameFeedback & { id: number }) | null>(
+      null,
+    ),
+    [press, setPress] = useState(0),
     [error, setError] = useState(""),
     [connected, setConnected] = useState(false);
   const clock = useRef<{ offset: number; rtt: number } | null>(null);
+  const pending = useRef<PendingControl[]>([]),
+    feedbackAt = useRef(0),
+    perfectUntil = useRef(0),
+    feedbackId = useRef(0);
   const matchId = activeMatch?.id,
     friendCode = activeMatch?.friend?.code;
+  const currentFeedbackId = feedback?.id;
+  useEffect(() => {
+    if (currentFeedbackId == null) return;
+    const timer = setTimeout(
+      () =>
+        setFeedback((current) =>
+          current?.id === currentFeedbackId ? null : current,
+        ),
+      1000,
+    );
+    return () => clearTimeout(timer);
+  }, [currentFeedbackId]);
   useEffect(() => startMusic(game === "memory" ? "monkey" : game), [game]);
   useEffect(() => {
     if (ready && !activeMatch && !closed.current) void nav({ to: "/" });
@@ -237,6 +275,7 @@ export function ServerArena({ game }: { game: Game }) {
     let live = true,
       ws: WebSocket | null = null,
       settled = false,
+      resultTimer: ReturnType<typeof setTimeout> | undefined,
       pings: ReturnType<typeof setInterval> | undefined;
     const pendingPings = new Map<number, number>();
     let pingId = 0;
@@ -245,6 +284,11 @@ export function ServerArena({ game }: { game: Game }) {
     setConnected(false);
     snapshot.current = null;
     nextSeq.current = 0;
+    pending.current = [];
+    feedbackAt.current = 0;
+    perfectUntil.current = 0;
+    setFeedback(null);
+    setOpponent(null);
     const connect = async () => {
       const {
         data: { session },
@@ -280,14 +324,25 @@ export function ServerArena({ game }: { game: Game }) {
         if (v.committed) {
           settled = true;
           closed.current = true;
-          publishArenaView(v);
-          if (friendCode)
-            void nav({ to: "/challenge/$code", params: { code: friendCode } });
-          else {
-            if (v.lastOutcome?.won) sfx.win();
-            else sfx.lose();
-            void nav({ to: "/result" });
-          }
+          resultTimer = setTimeout(
+            () => {
+              if (!live) return;
+              publishArenaView(v);
+              if (friendCode)
+                void nav({
+                  to: "/challenge/$code",
+                  params: { code: friendCode },
+                });
+              else {
+                if (v.lastOutcome?.won) sfx.win();
+                else sfx.lose();
+                void nav({ to: "/result" });
+              }
+            },
+            feedbackAt.current
+              ? Math.max(0, feedbackAt.current + 1000 - performance.now())
+              : 0,
+          );
           return;
         }
         if (v.matchId !== matchId) return;
@@ -301,7 +356,40 @@ export function ServerArena({ game }: { game: Game }) {
           ping();
           pings = setInterval(ping, 2000);
         }
+        const previous = snapshot.current?.view.engine ?? null;
+        if (v.engine) {
+          const event =
+            confirmedFeedback(previous, v.engine) ??
+            (previous && !previous.done && v.engine.done
+              ? { text: "RUN OVER", good: false, perfect: false }
+              : null);
+          if (event) {
+            feedbackAt.current = performance.now();
+            perfectUntil.current = event.perfect ? performance.now() + 600 : 0;
+            setFeedback({ ...event, id: ++feedbackId.current });
+            if (!event.good) {
+              if (game === "reaction") sfx.falseStart();
+              else sfx.miss();
+            } else if (event.perfect) sfx.secured();
+            else sfx.note(880);
+          }
+          setRound(v.engine.index);
+        }
+        pending.current = pending.current.filter(
+          (control) => control.seq > v.seq,
+        );
         snapshot.current = { view: v, received: performance.now() };
+        setOpponent((current) => {
+          const next: ArenaView["opponent"] = v.opponent ?? null;
+          if (!current || !next) return next;
+          return current.score === next.score &&
+            current.ahead === next.ahead &&
+            current.needed === next.needed &&
+            current.forfeited === next.forfeited &&
+            current.prizeUnits === next.prizeUnits
+            ? current
+            : next;
+        });
         setConnected(true);
         setError("");
         if (v.engine) setScore(v.engine.score);
@@ -323,10 +411,11 @@ export function ServerArena({ game }: { game: Game }) {
     return () => {
       live = false;
       clearInterval(pings);
+      clearTimeout(resultTimer);
       socketRef.current = null;
       ws?.close();
     };
-  }, [matchId, friendCode, nav]);
+  }, [matchId, friendCode, nav, game]);
   useEffect(() => {
     const c = canvas.current,
       element = arena.current;
@@ -334,17 +423,32 @@ export function ServerArena({ game }: { game: Game }) {
     const ctx = c.getContext("2d");
     if (!ctx) return;
     const { size, disconnect } = setupCanvasArena(c, element, ctx);
-    let frame = 0;
+    let frame = 0,
+      previousPaint = performance.now(),
+      birdY: number | null = null,
+      scroll: number | null = null;
     const render = () => {
       const sample = snapshot.current;
       if (sample?.view.engine) {
-        const s = structuredClone(sample.view.engine),
+        const time = performance.now(),
           now = clock.current
-            ? performance.now() + clock.current.offset
-            : sample.view.serverTime +
-              Math.min(300, performance.now() - sample.received);
-        if (s.game !== "reaction") advance(s, now);
-        draw(ctx, s, size.width, size.height, now);
+            ? time + clock.current.offset + Math.min(100, clock.current.rtt / 2)
+            : sample.view.serverTime + Math.min(300, time - sample.received),
+          s = predictFrame(sample.view.engine, pending.current, now);
+        if (s.game === "flappy") {
+          birdY =
+            birdY == null
+              ? s.y
+              : smoothPosition(birdY, s.y, time - previousPaint);
+          scroll =
+            scroll == null
+              ? s.scroll
+              : smoothPosition(scroll, s.scroll, time - previousPaint);
+          s.y = birdY;
+          s.scroll = scroll;
+        }
+        previousPaint = time;
+        draw(ctx, s, size.width, size.height, now, time < perfectUntil.current);
       }
       frame = requestAnimationFrame(render);
     };
@@ -363,8 +467,22 @@ export function ServerArena({ game }: { game: Game }) {
       socket?.readyState !== WebSocket.OPEN
     )
       return;
-    socket.send(JSON.stringify({ seq: ++nextSeq.current, input: command }));
-    sfx.tap();
+    if (snapshot.current?.view.engine?.done) return;
+    const seq = ++nextSeq.current,
+      sample = snapshot.current;
+    const at = clock.current
+      ? performance.now() +
+        clock.current.offset +
+        Math.min(100, clock.current.rtt / 2)
+      : sample
+        ? sample.view.serverTime +
+          Math.min(300, performance.now() - sample.received)
+        : 0;
+    pending.current.push({ seq, input: command, at });
+    socket.send(JSON.stringify({ seq, input: command }));
+    setPress((value) => value + 1);
+    if (game === "rhythm") sfx.note(command === "left" ? 523 : 659);
+    else sfx.tap();
   };
   const tap = (x: number, y: number) => {
     const bounds = arena.current?.getBoundingClientRect();
@@ -392,12 +510,30 @@ export function ServerArena({ game }: { game: Game }) {
   return (
     <main className="mx-auto flex h-[100dvh] w-full max-w-md touch-none select-none flex-col overflow-hidden bg-background">
       <MatchBalance coins={profile.coins} wagerEur={wagerEur} />
-      <div className="flex justify-between px-5 py-2 text-xs">
-        <b>
-          {MINIGAMES.find((g) => g.id === game)?.name} · {score}
-        </b>
-        <span>vs {activeMatch.opponent.username}</span>
+      <div className="flex items-center justify-between px-5 py-2">
+        <div className="text-xs">
+          <b>{MINIGAMES.find((g) => g.id === game)?.name}</b>
+          <p className="text-muted-foreground">
+            vs {activeMatch.opponent.username}
+          </p>
+        </div>
+        <div className="text-right">
+          <strong
+            key={score}
+            className="arena-score-bump inline-block font-display text-3xl font-black tabular-nums text-primary"
+          >
+            {game === "reaction" && round === 0 ? "—" : score}
+          </strong>
+          <p className="text-[9px] tracking-widest text-muted-foreground">
+            {SCORE_UNITS[game]}
+          </p>
+        </div>
       </div>
+      <OpponentOutBanner
+        opponentName={activeMatch.opponent.username}
+        progress={opponent}
+        game={game}
+      />
       <section
         ref={arena}
         role="application"
@@ -443,9 +579,50 @@ export function ServerArena({ game }: { game: Game }) {
                 : "up",
           );
         }}
+        onPointerMove={(e) => {
+          const p = pointer.current;
+          if (game !== "direction" || !p) return;
+          const dx = e.clientX - p.x,
+            dy = e.clientY - p.y;
+          if (Math.max(Math.abs(dx), Math.abs(dy)) < 15) return;
+          pointer.current = null;
+          send(
+            Math.abs(dx) > Math.abs(dy)
+              ? dx > 0
+                ? "right"
+                : "left"
+              : dy > 0
+                ? "down"
+                : "up",
+          );
+        }}
+        onPointerCancel={() => {
+          pointer.current = null;
+        }}
         className="relative min-h-0 flex-1 overflow-hidden border-y border-border bg-card"
       >
         <canvas ref={canvas} className="pointer-events-none absolute inset-0" />
+        {press > 0 && (
+          <div
+            key={`press-${press}`}
+            aria-hidden="true"
+            className="arena-input-pulse pointer-events-none absolute inset-0"
+          />
+        )}
+        {feedback && (
+          <div
+            key={feedback.id}
+            role="status"
+            className={`arena-float pointer-events-none absolute left-1/2 top-[30%] z-10 whitespace-nowrap font-display text-4xl font-black ${feedback.good ? "text-primary" : "text-destructive"}`}
+            onAnimationEnd={() =>
+              setFeedback((current) =>
+                current?.id === feedback.id ? null : current,
+              )
+            }
+          >
+            {feedback.text}
+          </div>
+        )}
         {!connected && (
           <p role="status" className="absolute inset-0 grid place-items-center">
             Connecting to arena…

@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { DuelProvider } from "../lib/duel/provider";
 import { AccountGate } from "../components/duel/AccountGate";
+import { MenuFeedback } from "../components/duel/MenuFeedback";
 
 function NotFoundComponent() {
   return (
@@ -151,6 +152,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <MenuFeedback />
       <AccountGate>
         <DuelProvider>
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
