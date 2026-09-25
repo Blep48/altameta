@@ -7,10 +7,9 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { DuelProvider } from "../lib/duel/provider";
 import { AccountGate } from "../components/duel/AccountGate";
 import { MenuFeedback } from "../components/duel/MenuFeedback";
@@ -42,9 +41,6 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -95,14 +91,30 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         },
         { property: "og:type", content: "website" },
         { property: "og:site_name", content: "ALTAMETA" },
+        { property: "og:title", content: "ALTAMETA — 1v1 Arcade Duels" },
+        {
+          property: "og:description",
+          content: "Challenge your friends. Eight arcade games. Demo balance only.",
+        },
         {
           property: "og:image",
-          content: "https://altameta.vercel.app/altameta-icon.svg",
+          content: "https://altameta.vercel.app/altameta-social-v2.png",
         },
-        { name: "twitter:card", content: "summary" },
+        { name: "twitter:card", content: "summary_large_image" },
         {
           name: "twitter:image",
-          content: "https://altameta.vercel.app/altameta-icon.svg",
+          content: "https://altameta.vercel.app/altameta-social-v2.png",
+        },
+        { property: "og:image:type", content: "image/png" },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
+        {
+          property: "og:image:alt",
+          content: "ALTAMETA — Arcade duels · Demo balance",
+        },
+        {
+          name: "twitter:image:alt",
+          content: "ALTAMETA — Arcade duels · Demo balance",
         },
         { name: "theme-color", content: "#0b0d12" },
       ],
@@ -122,7 +134,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           href: "https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Space+Grotesk:wght@400;500;700&display=swap",
         },
         { rel: "icon", href: "/altameta-icon.svg", type: "image/svg+xml" },
-        { rel: "apple-touch-icon", href: "/altameta-icon.svg" },
+        { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
         { rel: "manifest", href: "/manifest.webmanifest" },
       ],
     }),

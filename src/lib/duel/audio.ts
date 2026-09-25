@@ -12,7 +12,6 @@ export type MusicStyle =
   | "monkey"
   | "precision"
   | "flappy"
-  | "dash"
   | "stack"
   | "knife";
 
