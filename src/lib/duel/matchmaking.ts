@@ -15,21 +15,23 @@ export interface MatchmakingService {
 }
 
 const NAMES = [
-  "NOVA_STRIKE",
-  "kenji.exe",
-  "VOLT",
-  "ghostpixel",
-  "RAZOR_9",
-  "milo_sniper",
-  "ZEN0",
-  "BlueFangs",
-  "quickdraw_77",
-  "AXIOM",
-  "neonwolf",
-  "TRIGGER",
-  "Sora_TT",
-  "PULSEBOY",
-  "hexgrid",
+  "Aci Tom",
+  "Ottone Erminio",
+  "Kakato Miso",
+  "Ranza Mino",
+  "Cidio Gino",
+  "Là Aldo",
+  "Rato Timo",
+  "Renne Mino",
+  "Rato Mino",
+  "Rdato Rita",
+  "Cente Lino",
+  "Ricamente Teo",
+  "Lione Checco",
+  "Pocchia Checca",
+  "Ucarlo Devis",
+  "Tali Geni",
+  "Rea Nadia",
 ];
 
 const AVATARS = [
